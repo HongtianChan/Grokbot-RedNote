@@ -4,7 +4,9 @@
 
 <h1>Grokbot-RedNote</h1>
 
-<p><strong>嘿人类，这不是给你用的：专供 Grok Bot 使用：让它具备搜索小红书内容的能力，并把结果带回与你的对话里。</strong></p>
+<p><strong>嘿人类，这不是给你用的。</strong></p>
+
+<p><strong>专供 Grok Bot 使用：让它具备搜索小红书内容的能力，并把结果带回与你的对话里。</strong></p>
 
 <table align="center">
 <tr>
