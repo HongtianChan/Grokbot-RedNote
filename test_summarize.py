@@ -3,9 +3,20 @@
 """Self-check for the on-device search-result summarizer."""
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
+from pathlib import Path
 
-from summarize import classify_title, curate_notes, dedupe_notes, summarize_notes
+from summarize import (
+    classify_title,
+    cleanup_hook_search_dumps,
+    collect_search_paths,
+    curate_notes,
+    dedupe_notes,
+    load_notes_from_paths,
+    summarize_notes,
+)
 
 
 GO = "http://127.0.0.1:18765/go?id=aaaaaaaaaaaaaaaaaaaaaaaa&xsec_token=TOKEN1="
@@ -170,6 +181,90 @@ class CurateTests(unittest.TestCase):
 
     def test_empty_curation(self) -> None:
         self.assertEqual(curate_notes([]), [])
+
+
+class HookSearchCleanupTests(unittest.TestCase):
+    def _write(self, folder: Path, name: str, body: str = "{}\n") -> Path:
+        path = folder / name
+        path.write_text(body, encoding="utf-8")
+        return path
+
+    def test_deletes_extras_when_numbered_dumps_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            folder = Path(raw)
+            kept = [
+                self._write(folder, "01-视频开头钩子.json", '{"notes": [{"id": "a"}]}\n'),
+                self._write(folder, "10-内容开头技巧.json", '{"notes": [{"id": "b"}]}\n'),
+            ]
+            extras = [
+                self._write(folder, "gui-curated.png", "png"),
+                self._write(folder, "summary.json"),
+                self._write(folder, "summary.md", "# md\n"),
+                self._write(folder, "local-summary.json"),
+                self._write(folder, "local-summary.md", "# md\n"),
+                self._write(folder, "results-loaded.json", '{"notes": [{"id": "x"}]}\n'),
+                self._write(folder, "status-poll.json"),
+                self._write(folder, "curated.json", '{"notes": [{"id": "y"}]}\n'),
+                self._write(folder, "live-search-吸睛开头.json", '{"notes": [{"id": "z"}]}\n'),
+            ]
+            deleted = cleanup_hook_search_dumps(folder)
+            self.assertEqual({path.name for path in deleted}, {path.name for path in extras})
+            self.assertEqual(sorted(p.name for p in folder.iterdir()), [p.name for p in kept])
+            paths = collect_search_paths(folder, cleanup=False)
+            self.assertEqual([p.name for p in paths], [p.name for p in kept])
+            self.assertEqual(len(load_notes_from_paths(paths)), 2)
+
+    def test_without_numbered_dumps_keeps_fallback_json(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            folder = Path(raw)
+            fallback = [
+                self._write(folder, "curated.json", '{"notes": [{"id": "y"}]}\n'),
+                self._write(folder, "results-loaded.json", '{"notes": [{"id": "x"}]}\n'),
+            ]
+            junk = [
+                self._write(folder, "gui-curated.png", "png"),
+                self._write(folder, "summary.json"),
+                self._write(folder, "summary.md", "# md\n"),
+                self._write(folder, "local-summary.json"),
+                self._write(folder, "local-summary.md", "# md\n"),
+                self._write(folder, "status-poll.json"),
+            ]
+            deleted = cleanup_hook_search_dumps(folder)
+            self.assertEqual({path.name for path in deleted}, {path.name for path in junk})
+            self.assertEqual(sorted(p.name for p in folder.iterdir()), sorted(p.name for p in fallback))
+            paths = collect_search_paths(folder, cleanup=False)
+            self.assertEqual([p.name for p in paths], sorted(p.name for p in fallback))
+
+    def test_caps_oldest_numbered_dumps(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            folder = Path(raw)
+            paths = []
+            for index in range(1, 6):
+                path = self._write(folder, "%02d-topic.json" % index, '{"notes": [{"id": "%s"}]}\n' % index)
+                # Older prefix should be trimmed first when mtimes differ.
+                ts = 1_700_000_000 + index
+                os.utime(path, (ts, ts))
+                paths.append(path)
+            deleted = cleanup_hook_search_dumps(folder, numbered_cap=3)
+            self.assertEqual({path.name for path in deleted}, {"01-topic.json", "02-topic.json"})
+            remaining = sorted(p.name for p in folder.iterdir())
+            self.assertEqual(remaining, ["03-topic.json", "04-topic.json", "05-topic.json"])
+
+    def test_collect_search_paths_cleans_on_load(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            folder = Path(raw)
+            self._write(folder, "01-视频开头钩子.json", '{"notes": [{"id": "a"}]}\n')
+            self._write(folder, "gui-curated.png", "png")
+            self._write(folder, "results-loaded.json", '{"notes": [{"id": "x"}]}\n')
+            paths = collect_search_paths(folder)
+            self.assertEqual([p.name for p in paths], ["01-视频开头钩子.json"])
+            self.assertEqual(sorted(p.name for p in folder.iterdir()), ["01-视频开头钩子.json"])
+
+    def test_missing_directory_is_noop(self) -> None:
+        missing = Path("/tmp/xhs-hook-search-does-not-exist-for-tests")
+        self.assertFalse(missing.exists())
+        self.assertEqual(cleanup_hook_search_dumps(missing), [])
+        self.assertEqual(collect_search_paths(missing), [])
 
 
 if __name__ == "__main__":

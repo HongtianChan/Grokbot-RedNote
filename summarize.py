@@ -489,13 +489,89 @@ def load_notes_from_paths(paths: Iterable[Path]) -> list[dict]:
     return notes
 
 
-def collect_search_paths(source: Path) -> list[Path]:
+_NUMBERED_DUMP_RE = re.compile(r"^\d+-")
+_NUMBERED_DUMP_CAP = 20
+_HOOK_JUNK_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".md"}
+_HOOK_JUNK_NAMES = {"summary.json", "local-summary.json", "status-poll.json"}
+
+
+def is_numbered_search_dump(path: Path) -> bool:
+    return path.is_file() and path.suffix == ".json" and bool(_NUMBERED_DUMP_RE.match(path.name))
+
+
+def cleanup_hook_search_dumps(
+    directory: Path,
+    *,
+    numbered_cap: int = _NUMBERED_DUMP_CAP,
+) -> list[Path]:
+    """Delete leftover hook-search dumps the reload path does not use.
+
+    The GUI reloads numbered files like ``01-视频开头钩子.json``. When at least
+    one of those exists, every other file in the directory is removed
+    (screenshots, summaries, live-search copies, and similar leftovers).
+    Numbered dumps are kept, except the oldest are dropped if they exceed
+    ``numbered_cap``.
+
+    If the directory has no numbered dumps, only obvious junk is removed so
+    fallback JSON can still be loaded.
+    """
+    if not directory.is_dir():
+        return []
+    try:
+        entries = list(directory.iterdir())
+    except OSError:
+        return []
+
+    deleted: list[Path] = []
+    numbered: list[Path] = []
+    others: list[Path] = []
+    for path in entries:
+        if not path.is_file():
+            continue
+        if is_numbered_search_dump(path):
+            numbered.append(path)
+        else:
+            others.append(path)
+
+    def _unlink(path: Path) -> None:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return
+        except OSError:
+            return
+        deleted.append(path)
+
+    if numbered_cap >= 0 and len(numbered) > numbered_cap:
+        def _age(path: Path):
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                mtime = 0.0
+            return (mtime, path.name)
+
+        numbered.sort(key=_age, reverse=True)
+        for path in numbered[numbered_cap:]:
+            _unlink(path)
+        numbered = numbered[:numbered_cap]
+
+    for path in others:
+        if numbered or path.suffix.lower() in _HOOK_JUNK_SUFFIXES or path.name in _HOOK_JUNK_NAMES:
+            _unlink(path)
+    return deleted
+
+
+def collect_search_paths(source: Path, *, cleanup: bool = True) -> list[Path]:
     if source.is_file():
         return [source]
+    if not source.is_dir():
+        return []
+    if cleanup:
+        cleanup_hook_search_dumps(source)
     files = sorted(
         path
         for path in source.iterdir()
-        if path.is_file() and path.suffix == ".json" and re.match(r"\d+-", path.name)
+        if is_numbered_search_dump(path)
     )
     if files:
         return files
