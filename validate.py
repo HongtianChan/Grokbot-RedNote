@@ -16,14 +16,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from chrome_session import ChromeError, ChromeSession, polite_pause  # noqa: E402
-from rate_limit import (  # noqa: E402
-    check_note,
-    check_search,
-    record_note,
-    record_search,
-    remaining,
-)
+from chrome_session import ChromeError, ChromeSession  # noqa: E402
 
 REPORT_PATH = ROOT / "validation.json"
 
@@ -98,13 +91,10 @@ def run_validation(keyword: str, count: int) -> dict:
         "notes": [],
         "issues": [],
         "remote_unauthenticated": None,
-        "rate_limit": remaining(),
         "passed": False,
     }
     try:
-        check_search()
         search = session.search(keyword)
-        record_search()
         report["search"] = {
             "ok": bool(search.get("ok", True)),
             "loginWall": bool(search.get("loginWall")),
@@ -141,14 +131,7 @@ def run_validation(keyword: str, count: int) -> dict:
             if opened >= count:
                 break
             try:
-                check_note()
-            except Exception as exc:
-                report["issues"].append(str(exc))
-                break
-            polite_pause()
-            try:
                 detail = session.open_note(item.get("url") or "")
-                record_note()
             except ChromeError as exc:
                 report["issues"].append("Failed to open %s: %s" % (item.get("id"), exc))
                 report["notes"].append(
@@ -212,7 +195,6 @@ def run_validation(keyword: str, count: int) -> dict:
         return report
     finally:
         report["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        report["rate_limit_after"] = remaining()
         REPORT_PATH.write_text(
             json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
         )

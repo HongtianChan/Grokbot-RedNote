@@ -19,32 +19,18 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from chrome_session import ChromeError, ChromeSession, polite_pause  # noqa: E402
+from chrome_session import ChromeError, ChromeSession  # noqa: E402
 from note_urls import publicize_payload, resolve_go_location, session_open_url  # noqa: E402
 from refine_query import apply_explore_sample, refine_query, should_refine  # noqa: E402
-from rate_limit import (  # noqa: E402
-    RateLimitError,
-    check_enrich,
-    check_note,
-    check_search,
-    load_settings,
-    record_enrich,
-    record_note,
-    record_search,
-    remaining,
-    status_text,
-    update_settings,
-)
 from learn import clear_records, records_payload, safe_record_open, safe_rerank_and_log, trim_log  # noqa: E402
 from summarize import attach_summary, collect_search_paths, load_notes_from_paths, summarize_notes  # noqa: E402
 
 SERVICE_HOST = "127.0.0.1"
 SERVICE_PORT = 18765
 
-# Shared Chrome window + rate limits across the GUI and local HTTP service.
+# Shared Chrome window across the GUI and local HTTP service.
 _lock = threading.Lock()
 _session = ChromeSession()
-_last_pause_needed = False
 _activity_lock = threading.Lock()
 _activity = None  # "search" | "note" | None
 _activity_keyword = ""
@@ -81,14 +67,6 @@ def _activity_payload() -> dict:
         "activity": kind,
         "keyword": keyword,
     }
-
-
-def _pause_if_needed() -> None:
-    global _last_pause_needed
-    if _last_pause_needed:
-        info = remaining()
-        polite_pause(info["min_delay_sec"], info["max_delay_sec"])
-
 
 
 def _bring_gui_forward() -> None:
@@ -222,10 +200,6 @@ def _run_explore() -> dict:
     _set_activity("search", "探索")
     try:
         with _lock:
-            check_search()
-            global _last_pause_needed
-            # Development: skip inter-search delay. Restore before launch.
-            # _pause_if_needed()
             sample = _session.sample_explore()
             if not isinstance(sample, dict):
                 raise ChromeError("Unexpected explore result")
@@ -246,9 +220,6 @@ def _run_explore() -> dict:
                     "promoted": bool(item.get("promoted")),
                 })
             notes.sort(key=lambda n: (n["likes_count"] is None, -(n["likes_count"] or 0)))
-            # Count an explore scan as a search in /status. Cap enforcement stays off.
-            record_search()
-            _last_pause_needed = True
             payload = publicize_payload({
                 "ok": True,
                 "source": "explore",
@@ -257,7 +228,6 @@ def _run_explore() -> dict:
                 "loginWall": bool(sample.get("loginWall")),
                 "count": len(notes),
                 "notes": notes,
-                "status": status_text(),
             })
             payload["notes"] = safe_rerank_and_log(
                 payload.get("notes") or [], source="explore", query=""
@@ -287,10 +257,6 @@ def _run_search(keyword: str, refine: bool = True) -> dict:
     _set_activity("search", "探索" if exploring else used)
     try:
         with _lock:
-            check_search()
-            global _last_pause_needed
-            # Development: skip inter-search delay. Restore before launch.
-            # _pause_if_needed()
             if exploring:
                 sample = _session.sample_explore()
                 refinement = apply_explore_sample(refinement, sample)
@@ -298,12 +264,7 @@ def _run_search(keyword: str, refine: bool = True) -> dict:
                 if not used:
                     raise ValueError("Could not infer a search term from the explore feed")
                 _set_activity("search", used)
-                # Development: skip inter-search delay. Restore before launch.
-                # info = remaining()
-                # polite_pause(info["min_delay_sec"], info["max_delay_sec"])
             data = _session.search(used)
-            record_search()
-            _last_pause_needed = True
             data["query"] = original
             data["keyword"] = used
             data["refinement"] = refinement
@@ -326,12 +287,7 @@ def _run_note(url: str, source_url: str = "") -> dict:
     _set_activity("note", open_url)
     try:
         with _lock:
-            check_note()
-            global _last_pause_needed
-            _pause_if_needed()
             data = _session.open_note(open_url)
-            record_note()
-            _last_pause_needed = True
             data = publicize_payload(data)
             safe_record_open(data, requested_url=open_url)
             return data
@@ -357,33 +313,10 @@ def _run_enrich(url: str, max_commenters: int = 3, source_url: str = "") -> dict
     _set_activity("note", open_url)
     try:
         with _lock:
-            check_note()
-            global _last_pause_needed
-            _pause_if_needed()
-
-            def after_note() -> None:
-                record_note()
-                global _last_pause_needed
-                _last_pause_needed = True
-
-            def before_profile() -> None:
-                check_enrich()
-
-            def after_profile(ok: bool = True) -> None:
-                if ok:
-                    record_enrich()
-                global _last_pause_needed
-                _last_pause_needed = True
-
             data = _session.enrich_note(
                 open_url,
                 max_commenters=max_commenters,
-                pause=_pause_if_needed,
-                before_profile=before_profile,
-                after_profile=after_profile,
-                after_note=after_note,
             )
-            data["limits"] = remaining()
             data = publicize_payload(data)
             safe_record_open(data, requested_url=open_url)
             return data
@@ -406,9 +339,8 @@ def _attach_search_enrichment(data: dict, max_commenters: int) -> dict:
         return data
     try:
         extra = _run_enrich(url, max_commenters=max_commenters, source_url=first.get("source_url") or "")
-    except (RateLimitError, ChromeError, ValueError) as exc:
+    except (ChromeError, ValueError) as exc:
         data["enrichment"] = {"error": str(exc)}
-        data["limits"] = remaining()
         return data
     data["enriched_note"] = {
         "title": extra.get("title") or "",
@@ -422,7 +354,6 @@ def _attach_search_enrichment(data: dict, max_commenters: int) -> dict:
     data["comment_items"] = extra.get("comment_items") or []
     data["portraits"] = extra.get("portraits") or []
     data["enrichment"] = extra.get("enrichment") or {}
-    data["limits"] = remaining()
     return publicize_payload(data)
 
 
@@ -544,12 +475,9 @@ class LocalHandler(BaseHTTPRequestHandler):
             if path == "/go":
                 return self._handle_go(query, head=False)
             if path == "/status":
-                return self._send(200, {"ok": True, **_activity_payload(), **remaining(), "status": status_text()})
+                return self._send(200, {"ok": True, **_activity_payload()})
             if path == "/settings":
-                return self._send(
-                    200,
-                    {"ok": True, **load_settings(), **remaining(), "status": status_text()},
-                )
+                return self._send(200, {"ok": True})
             if path == "/refine":
                 keyword = (query.get("q") or query.get("keyword") or [""])[0]
                 return self._send(200, {"ok": True, **refine_query(keyword)})
@@ -599,8 +527,6 @@ class LocalHandler(BaseHTTPRequestHandler):
             if path == "/records":
                 return self._send(200, records_payload())
             return self._send(404, {"ok": False, "error": "Unknown route"})
-        except RateLimitError as exc:
-            return self._send(429, {"ok": False, "error": str(exc)})
         except (ChromeError, ValueError) as exc:
             return self._send(400, {"ok": False, "error": str(exc)})
         except Exception as exc:  # noqa: BLE001
@@ -612,8 +538,8 @@ class LocalHandler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
         try:
             if path == "/settings":
-                data = update_settings(self._read_json())
-                return self._send(200, {"ok": True, **data, "status": status_text()})
+                self._read_json()
+                return self._send(200, {"ok": True})
             if path == "/summarize":
                 body = self._read_json()
                 notes = body.get("notes") if isinstance(body.get("notes"), list) else []
