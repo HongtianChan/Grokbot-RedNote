@@ -209,37 +209,37 @@ function uniqueNotes(notes) {
   return out;
 }
 
-function renderResults(payload) {
-  const resultsEl = document.getElementById("results");
+function renderResults(payload, options) {
   const curatedList = document.getElementById("curated-list");
   const allList = document.getElementById("all-list");
-  const curatedHeading = document.getElementById("curated-heading");
-  const allHeading = document.getElementById("all-heading");
-  const emptyEl = document.getElementById("results-empty");
+  const curatedLabel = document.getElementById("curated-toggle-label");
+  const allLabel = document.getElementById("all-toggle-label");
   const loadBtn = document.getElementById("load-saved");
-  if (!resultsEl || !curatedList || !allList) return;
+  const clearBtn = document.getElementById("clear-results");
+  const statusEl = document.getElementById("results-status");
+  if (!curatedList || !allList) return;
 
   const curated = Array.isArray(payload && payload.curated) ? payload.curated : [];
   const all = uniqueNotes(payload && payload.notes);
   const savedAvailable = !!(payload && payload.saved_available);
-  if (loadBtn) {
-    loadBtn.classList.toggle("show", savedAvailable && curated.length === 0 && all.length === 0);
-  }
+  const empty = curated.length === 0 && all.length === 0;
+  if (loadBtn) loadBtn.classList.toggle("show", savedAvailable && empty);
+  if (clearBtn) clearBtn.disabled = all.length === 0;
+  document.body.classList.toggle("has-results", !empty);
 
-  if (!curated.length && !all.length) {
-    document.body.classList.remove("has-results");
-    curatedList.innerHTML = "";
-    allList.innerHTML = "";
-    if (emptyEl) emptyEl.hidden = false;
-    return;
-  }
-
-  document.body.classList.add("has-results");
-  if (emptyEl) emptyEl.hidden = true;
-  if (curatedHeading) curatedHeading.textContent = "精选 " + curated.length;
-  if (allHeading) allHeading.textContent = "全部结果 " + all.length;
+  if (curatedLabel) curatedLabel.textContent = curated.length ? "精选 " + curated.length : "精选";
+  if (allLabel) allLabel.textContent = all.length ? "全部结果 " + all.length : "全部结果";
   curatedList.innerHTML = curated.map(noteItem).join("");
   allList.innerHTML = all.map(noteItem).join("");
+
+  if (statusEl) {
+    if (options && options.cleared) {
+      statusEl.hidden = false;
+      statusEl.textContent = "结果已清空";
+    } else if (all.length) {
+      statusEl.hidden = true;
+    }
+  }
 }
 
 let resultsRevision = null;
@@ -252,7 +252,7 @@ async function fetchResults(url) {
 }
 
 async function pollResults(force) {
-  if (!document.getElementById("results")) return;
+  if (!document.getElementById("all-list")) return;
   try {
     const data = await fetchResults("/results");
     const revision = data && data.revision;
@@ -277,12 +277,54 @@ async function loadSavedHooks() {
   renderResults(data);
 }
 
+async function clearResults() {
+  const statusEl = document.getElementById("results-status");
+  const clearBtn = document.getElementById("clear-results");
+  if (clearBtn) clearBtn.disabled = true;
+  try {
+    const response = await fetch("/clear-results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+      cache: "no-store",
+    });
+    const data = await response.json();
+    if (!response.ok || !data || data.ok === false) {
+      throw new Error((data && data.error) || "clear failed");
+    }
+    resultsRevision = data && data.revision;
+    renderResults({
+      curated: [],
+      notes: [],
+      saved_available: !!(data && data.saved_available),
+    }, { cleared: true });
+    await pollResults(true);
+    if (statusEl && !((data.notes && data.notes.length) || (data.curated && data.curated.length))) {
+      statusEl.hidden = false;
+      statusEl.textContent = "结果已清空";
+    }
+  } catch (_err) {
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.textContent = "清空失败，请重试";
+    }
+    if (clearBtn) clearBtn.disabled = false;
+    await pollResults(true);
+  }
+}
+
 function startResultsPoll() {
-  if (!document.getElementById("results")) return;
+  if (!document.getElementById("all-list")) return;
   const loadBtn = document.getElementById("load-saved");
   if (loadBtn) {
     loadBtn.addEventListener("click", () => {
       loadSavedHooks().catch(() => {});
+    });
+  }
+  const clearBtn = document.getElementById("clear-results");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      clearResults().catch(() => {});
     });
   }
   pollResults(true);
@@ -293,8 +335,139 @@ function startResultsPoll() {
   }
 }
 
+function formatRecordTime(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.replace("T", " ").replace(/[+-]\d{2}:\d{2}$/, "").replace(/Z$/, "");
+}
+
+function renderRecords(payload) {
+  const listEl = document.getElementById("records-list");
+  const emptyEl = document.getElementById("records-empty");
+  const statusEl = document.getElementById("records-status");
+  const headingEl = document.getElementById("records-toggle-label") || document.getElementById("records-heading");
+  const clearBtn = document.getElementById("clear-records");
+  if (!listEl) return;
+
+  const records = Array.isArray(payload && payload.records) ? payload.records : [];
+  if (headingEl) headingEl.textContent = records.length ? "搜索记录 " + records.length : "搜索记录";
+  if (clearBtn) clearBtn.disabled = records.length === 0;
+  if (statusEl && records.length) statusEl.hidden = true;
+
+  if (!records.length) {
+    listEl.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+
+  if (emptyEl) emptyEl.hidden = true;
+  listEl.innerHTML = records.map((record) => {
+    const query = String((record && record.query) || "搜索").trim() || "搜索";
+    const count = Number(record && record.count);
+    const when = formatRecordTime(record && record.ts);
+    const countText = Number.isFinite(count) ? count + " 条" : "";
+    const meta = [when, countText].filter(Boolean).join(" · ");
+    const notes = Array.isArray(record && record.notes) ? record.notes : [];
+    const items = notes.map((note) => {
+      const url = String((note && note.url) || "").trim();
+      const title = String((note && note.title) || "(无标题)").trim() || "(无标题)";
+      const author = String((note && note.author) || "").trim();
+      const href = url ? escapeHtml(url) : "";
+      const inner = `<span class="note-title">${escapeHtml(title)}</span><span class="note-meta">${escapeHtml(author)}</span>`;
+      if (href) return `<li><a href="${href}" rel="noopener noreferrer">${inner}</a></li>`;
+      return `<li><div class="note-title">${inner}</div></li>`;
+    }).join("");
+    return `<li class="record"><h3 class="record-query">${escapeHtml(query)}</h3><p class="record-meta">${escapeHtml(meta)}</p><ol class="note-list">${items}</ol></li>`;
+  }).join("");
+}
+
+async function fetchRecords() {
+  const response = await fetch("/records", { cache: "no-store" });
+  if (!response.ok) throw new Error("records " + response.status);
+  return response.json();
+}
+
+async function pollRecords() {
+  if (!document.getElementById("records-list")) return;
+  try {
+    const data = await fetchRecords();
+    renderRecords(data);
+  } catch (_err) {
+    // Keep the last painted log if the service is briefly unreachable.
+  }
+}
+
+async function clearRecords() {
+  const statusEl = document.getElementById("records-status");
+  const clearBtn = document.getElementById("clear-records");
+  if (clearBtn) clearBtn.disabled = true;
+  try {
+    const response = await fetch("/clear-records", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+      cache: "no-store",
+    });
+    const data = await response.json();
+    if (!response.ok || !data || data.ok === false) {
+      throw new Error((data && data.error) || "clear failed");
+    }
+    renderRecords({ records: [], count: 0 });
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.textContent = "记录已清空";
+    }
+    // Refresh from the service so the panel stays in sync; do not touch /results.
+    await pollRecords();
+    if (statusEl && !(data.records && data.records.length)) {
+      statusEl.hidden = false;
+      statusEl.textContent = "记录已清空";
+    }
+  } catch (_err) {
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.textContent = "清空失败，请重试";
+    }
+    if (clearBtn) clearBtn.disabled = false;
+    await pollRecords();
+  }
+}
+
+function bindFold(toggleId, foldId, panelId) {
+  const btn = document.getElementById(toggleId);
+  const fold = document.getElementById(foldId);
+  if (!btn || !fold) return;
+  if (btn.dataset.foldBound === "1") return;
+  btn.addEventListener("click", () => {
+    const next = btn.getAttribute("aria-expanded") !== "true";
+    btn.setAttribute("aria-expanded", next ? "true" : "false");
+    fold.classList.toggle("open", next);
+    const panel = document.getElementById(panelId) || btn.closest("section");
+    if (panel) panel.classList.toggle("is-open", next);
+  });
+  btn.dataset.foldBound = "1";
+}
+
+function startRecordsPanel() {
+  if (!document.getElementById("records-panel")) return;
+  bindFold("curated-toggle", "curated-fold", "curated");
+  bindFold("records-toggle", "records-fold", "records-panel");
+  bindFold("all-toggle", "all-fold", "all-results");
+  const clearBtn = document.getElementById("clear-records");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      clearRecords().catch(() => {});
+    });
+  }
+  pollRecords();
+  window.setInterval(() => {
+    pollRecords();
+  }, 2000);
+}
+
 async function boot() {
   startResultsPoll();
+  startRecordsPanel();
   if (await waitForSetAvatar()) paint("happy");
 }
 

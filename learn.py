@@ -23,12 +23,13 @@ try:
 except Exception:  # pragma: no cover
     TZ = None
 
-from note_urls import extract_note_id as _id_from_href
+from note_urls import canonical_web_url, extract_note_id as _id_from_href
 from refine_query import INTENT_WORDS, PLACES, STOPWORDS, tokenize
 
 STATE_DIR = Path.home() / "Library" / "Application Support" / "Grokbot-RedNote"
 LOG_FILE = STATE_DIR / "learn.jsonl"
 WEIGHTS_FILE = STATE_DIR / "weights.json"
+RESULT_SET_CAP = 50
 
 # Scoring knobs. Opens outweigh skips; skips stay light and need repetition.
 AUTHOR_OPEN_WEIGHT = 3.0
@@ -181,6 +182,153 @@ def _load_events() -> list[dict]:
         if isinstance(item, dict) and item.get("event"):
             events.append(item)
     return events
+
+
+def _rewrite_log(events: list[dict]) -> None:
+    """Atomically replace the on-disk log. Caller must hold _lock."""
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = LOG_FILE.with_suffix(LOG_FILE.suffix + ".tmp")
+    lines = [json.dumps(event, ensure_ascii=False) + "\n" for event in events]
+    tmp.write_text("".join(lines), encoding="utf-8")
+    tmp.replace(LOG_FILE)
+
+
+def _note_ids_from_result_set(event: dict) -> set:
+    ids = set()
+    for raw in event.get("notes") or []:
+        if not isinstance(raw, dict):
+            continue
+        note_id = extract_note_id(raw.get("id"), raw.get("url"), raw.get("web_url"), raw.get("source_url"))
+        if note_id:
+            ids.add(note_id)
+    return ids
+
+
+def _open_belongs_to(event: dict, note_ids: set, set_ids: set) -> bool:
+    if event.get("set_id") and str(event.get("set_id")) in set_ids:
+        return True
+    note_id = extract_note_id(
+        event.get("id"), event.get("url"), event.get("web_url"), event.get("source_url")
+    )
+    return bool(note_id and note_id in note_ids)
+
+
+def _retained_events(events: list[dict]) -> list[dict]:
+    """Keep the most recent RESULT_SET_CAP search records and opens that belong to them."""
+    result_sets = [event for event in events if event.get("event") == "result_set"]
+    if len(result_sets) <= RESULT_SET_CAP:
+        return events
+    kept_sets = result_sets[-RESULT_SET_CAP:]
+    kept_obj = {id(event) for event in kept_sets}
+    kept_set_ids = {str(event.get("set_id")) for event in kept_sets if event.get("set_id")}
+    kept_note_ids: set = set()
+    for event in kept_sets:
+        kept_note_ids.update(_note_ids_from_result_set(event))
+    trimmed_sets = result_sets[:-RESULT_SET_CAP]
+    trimmed_set_ids = {str(event.get("set_id")) for event in trimmed_sets if event.get("set_id")}
+    trimmed_note_ids: set = set()
+    for event in trimmed_sets:
+        trimmed_note_ids.update(_note_ids_from_result_set(event))
+
+    retained: list[dict] = []
+    for event in events:
+        kind = event.get("event")
+        if kind == "result_set":
+            if id(event) in kept_obj:
+                retained.append(event)
+            continue
+        if kind == "open":
+            if _open_belongs_to(event, kept_note_ids, kept_set_ids):
+                retained.append(event)
+            elif _open_belongs_to(event, trimmed_note_ids, trimmed_set_ids):
+                continue
+            else:
+                retained.append(event)
+            continue
+        retained.append(event)
+    return retained
+
+
+def _trim_log_locked() -> bool:
+    events = _load_events()
+    retained = _retained_events(events)
+    if retained == events:
+        return False
+    _rewrite_log(retained)
+    return True
+
+
+def trim_log() -> bool:
+    """Trim older search records down to RESULT_SET_CAP and rebuild weights if needed."""
+    with _lock:
+        changed = _trim_log_locked()
+        if changed:
+            rebuild_weights()
+        return changed
+
+
+def clear_records() -> dict:
+    """Wipe the preference log and reset derived weights. Does not touch daily caps."""
+    with _lock:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        _rewrite_log([])
+        weights = _empty_weights()
+        _write_json(WEIGHTS_FILE, weights)
+        return {"ok": True, "cleared": True, "count": 0, "cap": RESULT_SET_CAP}
+
+
+def _share_url(note: dict) -> str:
+    """Official share/web URL already on the note. Does not invent tokens."""
+    for key in ("web_url", "url", "source_url"):
+        value = str(note.get(key) or "").strip()
+        if not value:
+            continue
+        if "/go?" in value or value.rstrip("/").endswith("/go"):
+            continue
+        if value.startswith("http://") or value.startswith("https://"):
+            if "xiaohongshu.com" in value or "rednote.com" in value:
+                return value
+    return canonical_web_url(
+        str(note.get("url") or note.get("web_url") or ""),
+        str(note.get("id") or ""),
+        source_url=str(note.get("source_url") or ""),
+    )
+
+
+def list_result_sets(newest_first: bool = True) -> list[dict]:
+    """Search records for the GUI panel, with official share URLs already on each note."""
+    records = []
+    for event in _load_events():
+        if event.get("event") != "result_set":
+            continue
+        notes = []
+        for raw in event.get("notes") or []:
+            if not isinstance(raw, dict):
+                continue
+            item = compact_note(raw)
+            item["url"] = _share_url(raw) or _share_url(item) or item.get("url") or ""
+            notes.append(item)
+        records.append({
+            "ts": event.get("ts") or "",
+            "set_id": event.get("set_id") or "",
+            "source": event.get("source") or "search",
+            "query": (event.get("query") or "").strip(),
+            "count": event.get("count") if event.get("count") is not None else len(notes),
+            "notes": notes,
+        })
+    if newest_first:
+        records.reverse()
+    return records
+
+
+def records_payload() -> dict:
+    records = list_result_sets(newest_first=True)
+    return {
+        "ok": True,
+        "count": len(records),
+        "cap": RESULT_SET_CAP,
+        "records": records,
+    }
 
 
 def _median(values: list[int]) -> Optional[int]:
@@ -355,6 +503,7 @@ def record_result_set(source: str, query: str, notes: list) -> Optional[str]:
     }
     with _lock:
         _append_event(event)
+        _trim_log_locked()
         rebuild_weights()
     return event["set_id"]
 

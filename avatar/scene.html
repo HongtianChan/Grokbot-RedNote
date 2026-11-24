@@ -13,33 +13,55 @@
       overflow: hidden;
       -webkit-user-select: none;
       user-select: none;
+      -webkit-app-region: drag;
     }
     #world {
       position: absolute;
       inset: 0;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 48px 16px 16px;
+      align-items: stretch;
+      padding: 42px 10px 18px;
       box-sizing: border-box;
+      min-height: 0;
+      -webkit-app-region: drag;
     }
-    body:not(.has-results) #world {
+    #mid {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(84px, 1fr) auto minmax(84px, 1fr);
+      gap: 8px;
+      align-items: stretch;
+      -webkit-app-region: drag;
+    }
+    #center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
-      padding: 56px 24px 36px;
+      min-width: 0;
+      -webkit-app-region: drag;
+    }
+    #stage-area, #actor-slot, #actor-motion, #avatar, #status, #hat, #path {
+      -webkit-app-region: drag;
     }
     #stage-area {
       position: relative;
-      width: 200px;
-      height: 220px;
-      flex: 0 0 220px;
+      width: 132px;
+      height: 148px;
+      flex: 0 0 148px;
     }
-    body.has-results #stage-area {
-      transform: scale(0.72);
+    #actor-slot {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 200px;
+      height: 200px;
+      margin-left: -100px;
+      transform: scale(0.66);
       transform-origin: top center;
-      height: 158px;
-      flex: 0 0 158px;
-      margin-bottom: 0;
     }
     #path {
       position: absolute;
@@ -59,13 +81,6 @@
       opacity: 1;
       transform: scaleX(1);
     }
-    #actor-slot {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 200px;
-      height: 200px;
-    }
     #actor-motion {
       width: 100%;
       height: 100%;
@@ -75,12 +90,8 @@
     #actor-motion.idle-loop {
       animation: idle-bob 4s cubic-bezier(0.618, 0.001, 0.184, 0.936) infinite;
     }
-    #actor-motion.shake {
-      animation: dust-shake 0.55s ease-out;
-    }
-    #actor-motion.happy {
-      animation: happy-bounce 0.45s ease-out;
-    }
+    #actor-motion.shake { animation: dust-shake 0.55s ease-out; }
+    #actor-motion.happy { animation: happy-bounce 0.45s ease-out; }
     @keyframes idle-bob {
       0%, 100% { transform: translateY(0) scale(1); }
       40% { transform: translateY(-5px) scale(1.067); }
@@ -121,18 +132,17 @@
     }
     #hat svg { display: block; width: 100%; height: auto; }
     #status {
-      margin-top: 8px;
-      min-height: 1.25em;
-      font: 13px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      margin-top: 4px;
+      min-height: 1.2em;
+      max-width: 132px;
+      font: 11px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
       color: #f3f4f6;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.04em;
       text-align: center;
       opacity: 0;
       transition: opacity 0.25s ease;
     }
     #status.on { opacity: 0.92; }
-    /* Cycling ellipsis beside the busy label; the avatar itself uses
-       official `thinking` (dots morph) for the same "still working" beat. */
     #status.on::after {
       content: "";
       display: inline-block;
@@ -148,55 +158,131 @@
       75%, 100% { content: "..."; }
     }
 
-    #results {
-      display: none;
-      width: min(100%, 360px);
-      flex: 1 1 auto;
+    .rail {
+      min-width: 0;
       min-height: 0;
-      margin-top: 8px;
-      color: #f3f4f6;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+      -webkit-app-region: no-drag;
+      color: #f4f4f5;
       font: 12px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
       -webkit-user-select: text;
       user-select: text;
       pointer-events: auto;
-      flex-direction: column;
-      gap: 10px;
-      overflow: auto;
     }
-    body.has-results #results { display: flex; }
-    #results h2 {
-      margin: 0 0 6px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: none;
-      opacity: 0.7;
-    }
-    #curated { flex: 0 0 auto; }
-    #all-results {
+    .rail section {
       flex: 0 0 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
+    .rail section.is-open {
+      flex: 1 1 0;
+      min-height: 88px;
+    }
+
+    .fold-toggle {
+      appearance: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      box-sizing: border-box;
+      border: 0;
+      border-radius: 10px;
+      padding: 8px 9px;
+      background: rgba(244, 244, 245, 0.07);
+      color: rgba(244, 244, 245, 0.9);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      text-align: left;
+      -webkit-app-region: no-drag;
+    }
+    .fold-toggle:hover { background: rgba(244, 244, 245, 0.12); }
+    .fold-toggle::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      margin-left: 6px;
+      flex: 0 0 auto;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(45deg);
+      opacity: 0.7;
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .fold-toggle[aria-expanded="true"]::after { transform: rotate(225deg); }
+    .fold {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.26s ease;
+      pointer-events: none;
+      min-height: 0;
+    }
+    .fold.open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      pointer-events: auto;
+      flex: 1 1 auto;
+    }
+    .fold-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+    section.is-open .fold.open .fold-inner {
+      overflow: auto;
+      margin-top: 6px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin: 0 0 8px;
+    }
+    .clear-btn {
+      appearance: none;
+      border: 0;
+      background: rgba(244, 244, 245, 0.1);
+      color: #f4f4f5;
+      border-radius: 999px;
+      padding: 5px 11px;
+      cursor: pointer;
+      font-size: 11px;
+      -webkit-app-region: no-drag;
+    }
+    .clear-btn:hover { background: rgba(244, 244, 245, 0.16); }
+    .clear-btn:disabled { opacity: 0.45; cursor: default; }
+
     .note-list {
       list-style: none;
       margin: 0;
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
     }
-    .note-list a {
+    .note-list a,
+    .note-list .note-fallback {
       display: block;
       padding: 7px 8px;
-      border-radius: 8px;
+      border-radius: 10px;
       color: inherit;
       text-decoration: none;
-      background: rgba(243, 244, 246, 0.06);
+      background: rgba(244, 244, 245, 0.07);
+      -webkit-app-region: no-drag;
     }
-    .note-list a:hover { background: rgba(243, 244, 246, 0.12); }
+    .note-list a:hover { background: rgba(244, 244, 245, 0.13); }
     .note-title {
       display: block;
       font-size: 12px;
-      font-weight: 550;
+      font-weight: 560;
       letter-spacing: 0;
       white-space: nowrap;
       overflow: hidden;
@@ -205,66 +291,122 @@
     .note-meta {
       display: block;
       margin-top: 2px;
-      font-size: 11px;
-      opacity: 0.7;
+      font-size: 10.5px;
+      color: rgba(244, 244, 245, 0.62);
       letter-spacing: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    #results-empty, #load-saved {
-      margin: 8px 0 0;
-      font-size: 12px;
-      letter-spacing: 0;
+    .hint, #records-empty, #records-status, #results-status {
+      margin: 4px 0 8px;
+      font-size: 11px;
       opacity: 0.75;
       text-align: center;
     }
-    #load-saved {
-      display: none;
-      appearance: none;
-      border: 0;
-      background: rgba(243, 244, 246, 0.1);
-      color: #f3f4f6;
-      border-radius: 999px;
-      padding: 6px 12px;
-      cursor: pointer;
+    #records-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
+    .record-query {
+      margin: 0 0 2px;
+      font-size: 12px;
+      font-weight: 560;
+    }
+    .record-meta {
+      margin: 0 0 6px;
+      font-size: 10.5px;
+      color: rgba(244, 244, 245, 0.62);
+    }
+
+    #load-saved { display: none; }
     #load-saved.show { display: inline-block; }
-    #load-saved:hover { background: rgba(243, 244, 246, 0.16); }
+    .toolbar { gap: 6px; }
+
+    .rail, .fold-inner, #all-list, #curated-list, #records-list {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(244, 244, 245, 0.28) transparent;
+    }
+    .fold-inner::-webkit-scrollbar { width: 6px; }
+    .fold-inner::-webkit-scrollbar-thumb {
+      background: rgba(244, 244, 245, 0.28);
+      border-radius: 99px;
+    }
+    button, a, input, textarea, select { -webkit-app-region: no-drag; }
     #live, #stage { display: none; }
   </style>
 </head>
 <body>
   <div id="world">
-    <div id="stage-area">
-      <div id="path" aria-hidden="true"></div>
-      <div id="actor-slot">
-        <div id="actor-motion">
-          <div id="avatar"></div>
-          <div id="hat" aria-hidden="true">
-            <svg viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="60" cy="54" rx="54" ry="9" fill="#e0a82e"/>
-              <path d="M20 50C22 16 98 16 100 50Z" fill="#f0c14b"/>
-              <rect x="54" y="14" width="12" height="36" rx="5" fill="#d39420"/>
-              <ellipse cx="60" cy="18" rx="8" ry="4" fill="#f6d36a"/>
-            </svg>
+    <div id="mid">
+      <aside id="rail-left" class="rail">
+        <section id="curated">
+          <button type="button" id="curated-toggle" class="fold-toggle" aria-expanded="false">
+            <span id="curated-toggle-label">精选</span>
+          </button>
+          <div id="curated-fold" class="fold">
+            <div class="fold-inner">
+              <ol id="curated-list" class="note-list"></ol>
+            </div>
+          </div>
+        </section>
+        <section id="records-panel">
+          <button type="button" id="records-toggle" class="fold-toggle" aria-expanded="false">
+            <span id="records-toggle-label">搜索记录</span>
+          </button>
+          <div id="records-fold" class="fold">
+            <div class="fold-inner">
+              <div class="toolbar">
+                <button type="button" id="clear-records" class="clear-btn">清空记录</button>
+              </div>
+              <p id="records-empty" hidden>暂无搜索记录</p>
+              <p id="records-status" hidden></p>
+              <ol id="records-list"></ol>
+            </div>
+          </div>
+        </section>
+      </aside>
+      <div id="center">
+        <div id="stage-area">
+          <div id="path" aria-hidden="true"></div>
+          <div id="actor-slot">
+            <div id="actor-motion">
+              <div id="avatar"></div>
+              <div id="hat" aria-hidden="true">
+                <svg viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg">
+                  <ellipse cx="60" cy="54" rx="54" ry="9" fill="#e0a82e"/>
+                  <path d="M20 50C22 16 98 16 100 50Z" fill="#f0c14b"/>
+                  <rect x="54" y="14" width="12" height="36" rx="5" fill="#d39420"/>
+                  <ellipse cx="60" cy="18" rx="8" ry="4" fill="#f6d36a"/>
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
+        <div id="status" aria-live="polite"></div>
       </div>
+      <aside id="rail-right" class="rail">
+        <section id="all-results">
+          <button type="button" id="all-toggle" class="fold-toggle" aria-expanded="false">
+            <span id="all-toggle-label">全部结果</span>
+          </button>
+          <div id="all-fold" class="fold">
+            <div class="fold-inner">
+              <div class="toolbar">
+                <button type="button" id="load-saved" class="clear-btn">已保存</button>
+                <button type="button" id="clear-results" class="clear-btn">清空结果</button>
+              </div>
+              <p id="results-status" hidden></p>
+              <ol id="all-list" class="note-list"></ol>
+            </div>
+          </div>
+        </section>
+      </aside>
     </div>
-    <div id="status" aria-live="polite"></div>
-    <div id="results">
-      <section id="curated">
-        <h2 id="curated-heading">精选</h2>
-        <ol id="curated-list" class="note-list"></ol>
-      </section>
-      <section id="all-results">
-        <h2 id="all-heading">全部结果</h2>
-        <ol id="all-list" class="note-list"></ol>
-      </section>
-    </div>
-    <p id="results-empty" hidden>搜索完成后，精选笔记会显示在这里</p>
-    <button type="button" id="load-saved">查看已保存的钩子搜索</button>
   </div>
   <div id="live"></div>
   <div id="stage"></div>

@@ -35,7 +35,7 @@ from rate_limit import (  # noqa: E402
     status_text,
     update_settings,
 )
-from learn import safe_record_open, safe_rerank_and_log  # noqa: E402
+from learn import clear_records, records_payload, safe_record_open, safe_rerank_and_log, trim_log  # noqa: E402
 from summarize import attach_summary, collect_search_paths, load_notes_from_paths, summarize_notes  # noqa: E402
 
 SERVICE_HOST = "127.0.0.1"
@@ -172,6 +172,30 @@ def _results_payload() -> dict:
     with _results_lock:
         payload = dict(_last_results)
     payload["saved_available"] = _hook_search_available()
+    return payload
+
+
+def clear_results() -> dict:
+    """Forget the in-memory result list only. Does not touch learn.jsonl or daily caps."""
+    with _results_lock:
+        revision = int(_last_results.get("revision") or 0) + 1
+        _last_results.clear()
+        _last_results.update({
+            "ok": True,
+            "revision": revision,
+            "source": "",
+            "query": "",
+            "keyword": "",
+            "count": 0,
+            "unique": 0,
+            "curated": [],
+            "notes": [],
+            "summary": {"groups": [], "total": 0, "unique": 0},
+            "saved_available": _hook_search_available(),
+        })
+        payload = dict(_last_results)
+    payload["saved_available"] = _hook_search_available()
+    payload["cleared"] = True
     return payload
 
 
@@ -572,6 +596,8 @@ class LocalHandler(BaseHTTPRequestHandler):
                 if load in {"hook-search", "hooks", "saved", "1", "true"}:
                     return self._send(200, _load_saved_hook_search())
                 return self._send(200, _results_payload())
+            if path == "/records":
+                return self._send(200, records_payload())
             return self._send(404, {"ok": False, "error": "Unknown route"})
         except RateLimitError as exc:
             return self._send(429, {"ok": False, "error": str(exc)})
@@ -592,6 +618,10 @@ class LocalHandler(BaseHTTPRequestHandler):
                 body = self._read_json()
                 notes = body.get("notes") if isinstance(body.get("notes"), list) else []
                 return self._send(200, {"ok": True, **summarize_notes(notes)})
+            if path == "/clear-records":
+                return self._send(200, clear_records())
+            if path == "/clear-results":
+                return self._send(200, clear_results())
             return self._send(404, {"ok": False, "error": "Unknown route"})
         except ValueError as exc:
             return self._send(400, {"ok": False, "error": str(exc)})
@@ -601,6 +631,10 @@ class LocalHandler(BaseHTTPRequestHandler):
 
 
 def start_service(background: bool = True) -> ThreadingHTTPServer:
+    try:
+        trim_log()
+    except Exception:
+        traceback.print_exc()
     server = ThreadingHTTPServer((SERVICE_HOST, SERVICE_PORT), LocalHandler)
     if background:
         thread = threading.Thread(target=server.serve_forever, name="Grokbot-RedNote-http", daemon=True)
@@ -611,7 +645,7 @@ def start_service(background: bool = True) -> ThreadingHTTPServer:
 def _service_only() -> int:
     server = start_service(background=False)
     print(
-        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize)"
+        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results /records; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize /clear-records /clear-results)"
         % (SERVICE_HOST, SERVICE_PORT),
         flush=True,
     )

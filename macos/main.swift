@@ -6,6 +6,13 @@ let serviceHost = "127.0.0.1"
 let servicePort = 18765
 let projectDir = "PROJECT_DIR"
 
+/// WKWebView otherwise swallows clicks, so the window cannot be dragged
+/// even with isMovableByWindowBackground. CSS -webkit-app-region: no-drag
+/// keeps buttons, links, and scroll lists clickable.
+final class DraggableWebView: WKWebView {
+    override var mouseDownCanMoveWindow: Bool { true }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var window: NSWindow!
     var webView: WKWebView!
@@ -33,24 +40,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func buildWindow() {
-        let rect = NSRect(x: 0, y: 0, width: 400, height: 680)
+        let rect = NSRect(x: 0, y: 0, width: 520, height: 520)
         window = NSWindow(
             contentRect: rect,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "Grokbot-RedNote"
         window.delegate = self
         window.center()
-        window.setFrameAutosaveName("GrokbotRedNoteAvatar")
+        window.setFrameAutosaveName("GrokbotRedNoteAvatarSquare")
         window.appearance = NSAppearance(named: .darkAqua)
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        window.minSize = NSSize(width: 320, height: 520)
+        // WKWebView covers the window; CSS -webkit-app-region: drag on the
+        // page, plus this flag, lets the user drag from non-control areas.
+        window.isMovableByWindowBackground = true
+        // Fixed 520x520 square companion window; keep the saved position only.
+        // New autosave name so an old 400x680 / 542x784 frame cannot come back.
+        let fixedSize = NSSize(width: 520, height: 520)
+        var frame = window.frame
+        frame.size = fixedSize
+        window.setFrame(frame, display: false)
+        window.minSize = fixedSize
+        window.maxSize = fixedSize
 
         let container = NSView(frame: rect)
         container.wantsLayer = true
@@ -72,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
-        webView = WKWebView(frame: rect, configuration: config)
+        webView = DraggableWebView(frame: rect, configuration: config)
         webView.autoresizingMask = [.width, .height]
         webView.setValue(false, forKey: "drawsBackground")
         if #available(macOS 12.0, *) {
