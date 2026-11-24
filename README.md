@@ -66,19 +66,13 @@ flowchart LR
 
 ## 🛠 从零安装
 
-需要 **macOS**（窗口应用要求 13.0 或更高）和 **Python 3.9+**。启动脚本使用系统自带的 `/usr/bin/python3`。本项目只用 Python 标准库，没有 `requirements.txt` 或其他包装文件，不必执行 `pip install`。
-
-另外需要 Google Chrome，并用默认配置登录 [小红书网页](https://www.rednote.com/)。服务通过已登录的 Chrome 会话做只读访问，首次运行时 macOS 可能会询问是否允许控制 Chrome。
-
-从零开始可以这样克隆并启动服务：
+macOS 13+，Python 3.9+，无需 `pip install`。用 Chrome 登录 [小红书网页](https://www.rednote.com/)。
 
 ```sh
 git clone https://github.com/HongtianChan/Grokbot-RedNote.git
 cd Grokbot-RedNote
 /usr/bin/python3 src/grokbot_rednote.py --service
 ```
-
-也可以在项目目录运行 `./start-service.sh`。服务起来后，再按下面的步骤打开应用。
 
 ## 🚀 如何运行
 
