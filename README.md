@@ -8,13 +8,13 @@
 
 <table align="center">
 <tr>
-<td align="center" valign="top" width="220">
-<img src="xiaohongshu.jpg" width="148" alt="小红书：Drunk">
+<td align="center" valign="top" width="280">
+<img src="xiaohongshu.jpg" width="240" alt="小红书：Drunk">
 <br>
 <sub><b>小红书</b><br>Drunk　955473847</sub>
 </td>
-<td align="center" valign="top" width="220">
-<img src="zanshang.jpg" width="148" alt="赞赏码">
+<td align="center" valign="top" width="280">
+<img src="zanshang.jpg" width="240" alt="赞赏码">
 <br>
 <sub><b>赞赏码</b></sub>
 </td>
