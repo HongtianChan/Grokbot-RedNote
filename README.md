@@ -4,7 +4,7 @@
 
 <h1>Grokbot-RedNote</h1>
 
-<p><strong>把小红书搜索接到 Grok Bot 的对话里。</strong></p>
+<p><strong>专供 Grok Bot 使用：由它检索小红书，并把结果带回自己的对话。</strong></p>
 
 <table align="center">
 <tr>
@@ -30,7 +30,7 @@
 
 ## 🧭 它是什么
 
-Grokbot-RedNote 是给 Grok Bot 用的小红书搜索桥：搜索由 Grok Bot 发起，本地服务用你已登录的 Chrome 会话做只读检索，标题和链接回到对话里。macOS 窗口只用来显示工作过程动画和已保存的结果，不是小红书客户端，窗口里没有搜索框或输入框。
+Grokbot-RedNote 是给 Grok Bot 用的工具，不是给人操作的搜索软件。小红书由 Grok Bot 亲自检索，标题和链接回到它自己的对话里；本地服务只借助你已登录的 Chrome 会话做只读访问。macOS 窗口只用来显示工作过程动画和已保存的结果，窗口里没有搜索框或输入框。
 
 作者：Hongtian Chan（[chenhongtian.com](https://chenhongtian.com/)，Drunk）。
 
