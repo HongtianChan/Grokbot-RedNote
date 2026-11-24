@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 JS_SEARCH = ROOT / "js" / "extract_search.js"
 JS_NOTE = ROOT / "js" / "extract_note.js"
 JS_EXPLORE = ROOT / "js" / "extract_explore.js"

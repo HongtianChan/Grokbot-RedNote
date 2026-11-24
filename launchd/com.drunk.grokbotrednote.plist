@@ -7,7 +7,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/bin/python3</string>
-    <string>PROJECT_DIR/grokbot_rednote.py</string>
+    <string>PROJECT_DIR/src/grokbot_rednote.py</string>
     <string>--service</string>
   </array>
   <key>RunAtLoad</key>

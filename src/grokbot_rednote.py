@@ -15,9 +15,10 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
-ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SRC_DIR = Path(__file__).resolve().parent
+ROOT = SRC_DIR.parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from chrome_session import ChromeError, ChromeSession  # noqa: E402
 from note_urls import publicize_payload, resolve_go_location, session_open_url  # noqa: E402

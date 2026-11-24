@@ -182,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func startServiceIfNeeded() {
         if isServiceUp() { return }
-        let script = (projectDir as NSString).appendingPathComponent("grokbot_rednote.py")
+        let script = (projectDir as NSString).appendingPathComponent("src/grokbot_rednote.py")
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         proc.arguments = [script, "--service"]

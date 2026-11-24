@@ -15,9 +15,10 @@ import sys
 from pathlib import Path
 from typing import Iterable, Optional
 
-ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SRC_DIR = Path(__file__).resolve().parent
+ROOT = SRC_DIR.parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 try:
     from refine_query import tokenize

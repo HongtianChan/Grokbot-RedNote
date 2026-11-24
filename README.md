@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="happy.png" width="132" height="132" alt="Grokbot-RedNote">
+<img src="assets/happy.png" width="132" height="132" alt="Grokbot-RedNote">
 
 <h1>Grokbot-RedNote</h1>
 
@@ -11,12 +11,12 @@
 <table align="center">
 <tr>
 <td align="center" valign="top" width="512">
-<img src="xiaohongshu.jpg" width="240" alt="小红书：Drunk">
+<img src="assets/xiaohongshu.jpg" width="240" alt="小红书：Drunk">
 <br>
 <sub><b>小红书</b><br>Drunk　955473847</sub>
 </td>
 <td align="center" valign="top" width="512">
-<img src="zanshang.jpg" width="240" alt="赞赏码">
+<img src="assets/zanshang.jpg" width="240" alt="赞赏码">
 <br>
 <sub><b>干活不易～请我喝杯奶茶？</b></sub>
 </td>
@@ -72,7 +72,7 @@ flowchart LR
 2. 建议先在项目目录启动服务，再打开应用：
 
 ```sh
-/usr/bin/python3 grokbot_rednote.py --service
+/usr/bin/python3 src/grokbot_rednote.py --service
 ```
 
 然后打开 `Grokbot-RedNote.app`。只先打开应用时，新的权限提示可能导致服务迟迟起不来。
