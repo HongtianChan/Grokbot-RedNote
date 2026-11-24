@@ -1,0 +1,35 @@
+# OS
+.DS_Store
+**/.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Env, logs, and local tokens
+.env
+.env.*
+*.log
+
+# Live local state (real files live in ~/Library/Application Support/XHSReader/)
+settings.json
+chrome_window.json
+cookies/
+*cookie*
+chrome-profile/
+Chrome Profile/
+User Data/
+
+# Generated validation report (may include live note URLs / xsec_token values)
+validation.json
+
+# Personal payment / 赞赏 QR — do not publish
+zanshang.jpg
+
+# Derived macOS app bundle; ship source (macos/, Python, icons) instead
+XHS Reader.app/
+*.app/

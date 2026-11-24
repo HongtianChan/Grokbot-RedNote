@@ -1,0 +1,16 @@
+Official robot icon references for XHS Reader.
+Rendered as 512x512 PNGs in yellow (#F5C400) and red (#E03131) from official source SVGs.
+
+Google Material Design Icons / Material Symbols (Apache License 2.0)
+https://github.com/google/material-design-icons
+- material-smart-toy-filled-*.png  (src/hardware/smart_toy materialicons)
+- material-smart-toy-outlined-*.png  (symbols/web/smart_toy outlined)
+- material-robot-2-filled-*.png  (symbols/web/robot_2 outlined fill)
+- material-robot-2-outlined-*.png  (symbols/web/robot_2 outlined)
+
+Lucide Icons "bot" (ISC)
+https://github.com/lucide-icons/lucide
+- lucide-bot-*.png
+
+Feather Icons and Heroicons were checked; they do not include a robot/bot glyph, so nothing was taken from those sets.
+Apple SF Symbols were not exported: their license does not allow redistributing extracted symbol PNGs as standalone icon templates.

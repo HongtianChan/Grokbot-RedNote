@@ -1,0 +1,8 @@
+Official Grok Bot mascot icons extracted on this Mac from the installed apps:
+- /Applications/Grok Bot.app/Contents/Resources/icon.icns
+  White rounded face with two black capsule eyes on a black squircle.
+- /Applications/Grok Bot Anywhere.app/Contents/Resources/icon.icns
+  Black ball with two white capsule eyes (primary template for the XHS Reader icon).
+- Grok Bot Computer Use helper icon (white body, black eyes, a gear wheel).
+
+PROJECT_DIR was empty. No matching mascot PNG was found in HongtianChan GitHub repos.

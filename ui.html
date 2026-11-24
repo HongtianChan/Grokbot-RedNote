@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XHS Reader</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #stage {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #avatar {
+      width: min(78vmin, 320px);
+      height: min(78vmin, 320px);
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"><div id="avatar"></div></div>
+  <script type="module">
+    import { createAvatar } from "./grok-bot-avatar-engine/src/index.mjs";
+
+    const handle = createAvatar(document.getElementById("avatar"), {
+      shape: "blob",
+      color: "black",
+      state: "idle",
+      id: "xhs-reader",
+      isPlaying: true,
+      isFollowingPointer: true
+    });
+
+    let busy = false;
+    function setActivity(nextBusy) {
+      const on = !!nextBusy;
+      if (on === busy) return;
+      busy = on;
+      handle.setState(on ? "working" : "idle");
+    }
+
+    window.setActivity = setActivity;
+    window.setScene = function (name) {
+      setActivity(name === "searching");
+    };
+
+    function startStatusPoll() {
+      const read = (url) =>
+        fetch(url, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : Promise.reject()))
+          .then((j) => setActivity(!!(j && j.busy)));
+      const tick = () =>
+        read("/status").catch(() =>
+          read("http://127.0.0.1:18765/status").catch(() => {})
+        );
+      setInterval(tick, 250);
+      tick();
+    }
+    startStatusPoll();
+  </script>
+</body>
+</html>
