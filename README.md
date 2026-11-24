@@ -66,7 +66,7 @@ flowchart LR
 
 ## 🛠 从零安装
 
-macOS 13+，Python 3.9+，无需 `pip install`。用 Chrome 登录 [小红书网页](https://www.rednote.com/)。
+macOS 13+，Python 3.9+，无需 `pip install`。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。
 
 ```sh
 git clone https://github.com/HongtianChan/Grokbot-RedNote.git
