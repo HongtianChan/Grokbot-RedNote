@@ -40,10 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "XHS Reader"
+        window.title = "Grokbot-RedNote"
         window.delegate = self
         window.center()
-        window.setFrameAutosaveName("XHSReaderAvatar")
+        window.setFrameAutosaveName("GrokbotRedNoteAvatar")
         window.appearance = NSAppearance(named: .darkAqua)
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
@@ -165,12 +165,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func startServiceIfNeeded() {
         if isServiceUp() { return }
-        let script = (projectDir as NSString).appendingPathComponent("xhs_reader.py")
+        let script = (projectDir as NSString).appendingPathComponent("grokbot_rednote.py")
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         proc.arguments = [script, "--service"]
         proc.currentDirectoryURL = URL(fileURLWithPath: projectDir)
-        let logPath = "/tmp/xhs-reader-service.log"
+        let logPath = "/tmp/grokbot-rednote-service.log"
         if !FileManager.default.fileExists(atPath: logPath) {
             FileManager.default.createFile(atPath: logPath, contents: nil)
         }
@@ -205,7 +205,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func presentError(_ message: String) {
         let alert = NSAlert()
-        alert.messageText = "XHS Reader"
+        alert.messageText = "Grokbot-RedNote"
         alert.informativeText = message
         alert.alertStyle = .warning
         alert.runModal()

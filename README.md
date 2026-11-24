@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="happy.png" width="132" height="132" alt="XHS Reader">
+<img src="happy.png" width="132" height="132" alt="Grokbot-RedNote">
 
-<h1>XHS Reader</h1>
+<h1>Grokbot-RedNote</h1>
 
 <p><strong>把小红书搜索接到 Grok Bot 的对话里。</strong></p>
 
@@ -25,7 +25,7 @@
 
 ## 🧭 它是什么
 
-XHS Reader 是给 Grok Bot 用的小红书搜索桥：Bot 在本地调用这个工具，搜索结果以标题和链接回到对话里。它不是又一个小红书客户端，只做只读检索和投递。
+Grokbot-RedNote 是给 Grok Bot 用的小红书搜索桥：Bot 在本地调用这个工具，搜索结果以标题和链接回到对话里。它不是又一个小红书客户端，只做只读检索和投递。
 
 作者：[chenhongtian](https://chenhongtian.com/)（Drunk）。
 
@@ -33,7 +33,7 @@ XHS Reader 是给 Grok Bot 用的小红书搜索桥：Bot 在本地调用这个�
 
 ```mermaid
 flowchart LR
-  G[Grok Bot] -->|调用本地接口| S[XHS Reader 服务]
+  G[Grok Bot] -->|调用本地接口| S[Grokbot-RedNote 服务]
   S -->|已登录的 Chrome 会话| X[小红书网页]
   X --> S
   S -->|标题 + 链接| G
@@ -54,10 +54,10 @@ macOS 窗口使用 Grok Bot Anywhere 的官方头像动画，并与真实搜索�
 ## 🚀 如何运行
 
 1. 用 Chrome 默认配置（资料名为 Drunk）登录 [小红书网页](https://www.rednote.com/)。
-2. 打开 `XHS Reader.app`，或在项目目录运行：
+2. 打开 `Grokbot-RedNote.app`，或在项目目录运行：
 
 ```sh
-/usr/bin/python3 xhs_reader.py --service
+/usr/bin/python3 grokbot_rednote.py --service
 ```
 
 3. 服务地址：`http://127.0.0.1:18765`。可用 `GET /health` 做健康检查，用 `GET /status` 查看当前状态。

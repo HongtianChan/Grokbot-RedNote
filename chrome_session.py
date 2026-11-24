@@ -22,7 +22,7 @@ JS_SEARCH = ROOT / "js" / "extract_search.js"
 JS_NOTE = ROOT / "js" / "extract_note.js"
 JS_EXPLORE = ROOT / "js" / "extract_explore.js"
 JS_PROFILE = ROOT / "js" / "extract_profile.js"
-STATE_DIR = Path.home() / "Library" / "Application Support" / "XHSReader"
+STATE_DIR = Path.home() / "Library" / "Application Support" / "Grokbot-RedNote"
 WINDOW_STATE = STATE_DIR / "chrome_window.json"
 
 SEARCH_URL = (

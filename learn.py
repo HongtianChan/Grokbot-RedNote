@@ -26,7 +26,7 @@ except Exception:  # pragma: no cover
 from note_urls import extract_note_id as _id_from_href
 from refine_query import INTENT_WORDS, PLACES, STOPWORDS, tokenize
 
-STATE_DIR = Path.home() / "Library" / "Application Support" / "XHSReader"
+STATE_DIR = Path.home() / "Library" / "Application Support" / "Grokbot-RedNote"
 LOG_FILE = STATE_DIR / "learn.jsonl"
 WEIGHTS_FILE = STATE_DIR / "weights.json"
 
@@ -477,7 +477,7 @@ def rerank(notes: list, source: str = "search") -> list:
     return [row[2] for row in scored]
 
 
-# --- helpers used by xhs_reader; never raise into the HTTP path ---
+# --- helpers used by grokbot_rednote; never raise into the HTTP path ---
 
 def safe_rerank_and_log(notes: list, source: str, query: str = "") -> list:
     try:

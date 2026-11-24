@@ -1,4 +1,4 @@
-Official robot icon references for XHS Reader.
+Official robot icon references for Grokbot-RedNote.
 Rendered as 512x512 PNGs in yellow (#F5C400) and red (#E03131) from official source SVGs.
 
 Google Material Design Icons / Material Symbols (Apache License 2.0)

@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.drunk.xhsreader</string>
+  <string>com.drunk.grokbotrednote</string>
   <key>ProgramArguments</key>
   <array>
     <string>/usr/bin/python3</string>
-    <string>PROJECT_DIR/xhs_reader.py</string>
+    <string>PROJECT_DIR/grokbot_rednote.py</string>
     <string>--service</string>
   </array>
   <key>RunAtLoad</key>
@@ -15,8 +15,8 @@
   <key>KeepAlive</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>/tmp/xhs-reader.log</string>
+  <string>/tmp/grokbot-rednote-service.log</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/xhs-reader.log</string>
+  <string>/tmp/grokbot-rednote-service.log</string>
 </dict>
 </plist>

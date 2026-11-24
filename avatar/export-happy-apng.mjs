@@ -3,7 +3,7 @@
  * using the local grok-bot-avatar-engine, with body #E5050F and
  * opaque white eyes via two-argument paintOf.
  *
- * Usage (from the xhs-reader project root, on the Mac):
+ * Usage (from the Grokbot-RedNote project root, on the Mac):
  *   node avatar/export-happy-apng.mjs
  */
 import { spawn } from "node:child_process";

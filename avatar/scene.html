@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="color-scheme" content="light dark">
-  <title>XHS Reader</title>
+  <title>Grokbot-RedNote</title>
   <style>
     html, body {
       margin: 0;
@@ -161,6 +161,7 @@
       pointer-events: auto;
       flex-direction: column;
       gap: 10px;
+      overflow: auto;
     }
     body.has-results #results { display: flex; }
     #results h2 {
@@ -173,9 +174,7 @@
     }
     #curated { flex: 0 0 auto; }
     #all-results {
-      flex: 1 1 auto;
-      min-height: 80px;
-      overflow: auto;
+      flex: 0 0 auto;
     }
     .note-list {
       list-style: none;

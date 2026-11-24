@@ -15,7 +15,7 @@ env/
 .env.*
 *.log
 
-# Live local state (real files live in ~/Library/Application Support/XHSReader/)
+# Live local state (real files live in ~/Library/Application Support/Grokbot-RedNote/)
 settings.json
 chrome_window.json
 cookies/
@@ -31,5 +31,5 @@ validation.json
 zanshang.jpg
 
 # Derived macOS app bundle; ship source (macos/, Python, icons) instead
-XHS Reader.app/
+Grokbot-RedNote.app/
 *.app/

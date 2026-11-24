@@ -14,7 +14,7 @@ try:
 except Exception:  # pragma: no cover - macOS 3.9 should have zoneinfo
     TZ = None
 
-STATE_DIR = Path.home() / "Library" / "Application Support" / "XHSReader"
+STATE_DIR = Path.home() / "Library" / "Application Support" / "Grokbot-RedNote"
 STATE_FILE = STATE_DIR / "state.json"
 SETTINGS_FILE = STATE_DIR / "settings.json"
 

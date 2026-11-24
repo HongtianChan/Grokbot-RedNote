@@ -92,17 +92,17 @@ def _pause_if_needed() -> None:
 
 
 def _bring_gui_forward() -> None:
-    """Launch XHS Reader.app or bring it to the front, same as start.sh."""
+    """Launch Grokbot-RedNote.app or bring it to the front, same as start.sh."""
     try:
         subprocess.Popen(
-            ["open", "./XHS Reader.app"],
+            ["open", "./Grokbot-RedNote.app"],
             cwd=str(ROOT),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
     except OSError as exc:
-        sys.stderr.write("[xhs-reader] could not open GUI: %s\n" % exc)
+        sys.stderr.write("[Grokbot-RedNote] could not open GUI: %s\n" % exc)
 
 
 
@@ -406,7 +406,7 @@ class LocalHandler(BaseHTTPRequestHandler):
     """Tiny localhost API so the assistant can be wired in later."""
 
     def log_message(self, fmt: str, *args) -> None:  # noqa: A003
-        sys.stderr.write("[xhs-reader] " + (fmt % args) + "\n")
+        sys.stderr.write("[Grokbot-RedNote] " + (fmt % args) + "\n")
 
     def _send(self, code: int, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -516,7 +516,7 @@ class LocalHandler(BaseHTTPRequestHandler):
             if path.startswith("/avatar/"):
                 return self._send_static(ROOT / "avatar" / path[len("/avatar/"):])
             if path == "/health":
-                return self._send(200, {"ok": True, "service": "xhs-reader", "host": SERVICE_HOST})
+                return self._send(200, {"ok": True, "service": "Grokbot-RedNote", "host": SERVICE_HOST})
             if path == "/go":
                 return self._handle_go(query, head=False)
             if path == "/status":
@@ -603,7 +603,7 @@ class LocalHandler(BaseHTTPRequestHandler):
 def start_service(background: bool = True) -> ThreadingHTTPServer:
     server = ThreadingHTTPServer((SERVICE_HOST, SERVICE_PORT), LocalHandler)
     if background:
-        thread = threading.Thread(target=server.serve_forever, name="xhs-reader-http", daemon=True)
+        thread = threading.Thread(target=server.serve_forever, name="Grokbot-RedNote-http", daemon=True)
         thread.start()
     return server
 
@@ -611,7 +611,7 @@ def start_service(background: bool = True) -> ThreadingHTTPServer:
 def _service_only() -> int:
     server = start_service(background=False)
     print(
-        "XHS Reader service on http://%s:%d  (GET /health /status /settings /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize)"
+        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize)"
         % (SERVICE_HOST, SERVICE_PORT),
         flush=True,
     )

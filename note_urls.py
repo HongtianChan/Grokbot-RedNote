@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Canonical chat/API note URLs for XHS Reader.
+"""Canonical chat/API note URLs for Grokbot-RedNote.
 
 Chat-facing `url` values are https://www.xiaohongshu.com/explore/{id}
 plus official share query params when the scraped href already has them

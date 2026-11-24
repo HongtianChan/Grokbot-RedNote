@@ -220,7 +220,7 @@ def run_validation(keyword: str, count: int) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate the XHS reader on 5-10 notes")
+    parser = argparse.ArgumentParser(description="Validate Grokbot-RedNote on 5-10 notes")
     parser.add_argument("keyword", nargs="?", default="Mac 快捷键")
     parser.add_argument("--count", type=int, default=8)
     args = parser.parse_args()

@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>XHS Reader</string>
+	<string>Grokbot-RedNote</string>
 	<key>CFBundleExecutable</key>
-	<string>XHS Reader</string>
+	<string>Grokbot-RedNote</string>
 	<key>CFBundleIconFile</key>
 	<string>icon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.drunk.xhsreader</string>
+	<string>com.drunk.grokbotrednote</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>XHS Reader</string>
+	<string>Grokbot-RedNote</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -25,7 +25,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>XHS Reader uses your already signed-in Chrome window to read Xiaohongshu search results and notes.</string>
+	<string>Grokbot-RedNote uses your already signed-in Chrome window to read Xiaohongshu search results and notes.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSPrincipalClass</key>
