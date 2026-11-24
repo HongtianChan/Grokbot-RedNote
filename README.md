@@ -8,6 +8,8 @@
 
 <p><strong>专供 Grok Bot 使用：让它具备搜索小红书内容的能力，并把结果带回与你的对话里。</strong></p>
 
+<p>目前还在开发状态，如有bug欢迎小红书私信，想夸夸我也行。</p>
+
 <table align="center">
 <tr>
 <td align="center" valign="top" width="512">
