@@ -26,7 +26,3 @@ User Data/
 
 # Generated validation report (may include live note URLs / xsec_token values)
 validation.json
-
-# Derived macOS app bundle; ship source (macos/, Python, icons) instead
-Grokbot-RedNote.app/
-*.app/
