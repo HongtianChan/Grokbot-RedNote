@@ -38,7 +38,7 @@
 
 Grokbot-RedNote 是给 Grok Bot 用的 macOS 工具。它通过你已登录的 Chrome 会话只读搜索小红书网页，并把标题和链接带回对话。
 
-作者：Hongtian Chan（[chenhongtian.com](https://chenhongtian.com/)，也可以叫他 Drunk）。
+作者：Hongtian Chan / Drunk [chenhongtian.com](https://chenhongtian.com/)。
 
 ## 📦 环境要求
 
