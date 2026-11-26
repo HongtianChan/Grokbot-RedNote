@@ -42,9 +42,11 @@ Grokbot-RedNote 是给 Grok Bot 用的 macOS 工具。它通过你已登录的 C
 
 ## 📦 环境要求
 
-- macOS 13 或更高
-- 系统自带的 `/usr/bin/python3`，版本 3.9 或更高，无需 `pip install`
+- 系统自带的 `/usr/bin/python3`，版本 3.9 或更高，无需 `pip install`。搜索服务本身只需要这个版本的 Python
+- `curl`（`install.sh` 用它检查服务是否已启动）
 - 先用 Chrome 默认配置登录 [小红书网页](https://www.rednote.com/)
+
+本项目仅支持 macOS。若要打开 `start.sh` 对应的应用窗口，需要 macOS 13 或更高（该要求来自应用的 `Info.plist`）。
 
 若缺少 `/usr/bin/python3`，运行 `./install.sh` 时脚本会提示安装 macOS Command Line Tools（`xcode-select --install`）。
 
@@ -57,11 +59,11 @@ cd Grokbot-RedNote
 
 ## 🛠 install.sh
 
-在项目根目录运行 `./install.sh`。它会把 `launchd/com.drunk.grokbotrednote.plist` 写入 `~/Library/LaunchAgents/com.drunk.grokbotrednote.plist`（自动填入本机项目路径，无需手动改路径），并启动 `/usr/bin/python3 src/grokbot_rednote.py --service`。本地服务地址是 `http://127.0.0.1:18765`。
+在项目根目录运行 `./install.sh`。它会把 `launchd/com.drunk.grokbotrednote.plist` 写入 `~/Library/LaunchAgents/com.drunk.grokbotrednote.plist`（自动填入本机项目路径，无需手动改路径），并启动 `/usr/bin/python3 src/grokbot_rednote.py --service`。若端口 `18765` 上已经有健康的服务在运行，脚本会写入 LaunchAgent 文件但暂不加载，以免启动第二份进程。本地服务地址是 `http://127.0.0.1:18765`。
 
-## 🖥 start.sh
+## ▶️ start-service.sh
 
-然后运行 `./start.sh`。它会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。`Grokbot-RedNote.app` 不在 git 仓库中（已被 gitignore），若该文件不存在，`start.sh` 会失败。
+若不想用 LaunchAgent，也可以在项目根目录运行 `./start-service.sh`。它会执行 `/usr/bin/python3 src/grokbot_rednote.py --service`，在前台启动同一个本地服务。不要在服务已经运行时再执行一次（包括刚跑完 `./install.sh` 之后），否则会因端口被占用而失败。
 
 ## ✅ 确认服务在运行
 
@@ -80,6 +82,10 @@ curl 'http://127.0.0.1:18765/search?q=关键词'
 ```
 
 成功时会返回笔记的标题和链接。也可以把仓库链接交给 Grok Bot，让它帮你配置并调用。
+
+## 🖥 start.sh
+
+`./start.sh` 会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。这不是启动搜索服务的必要步骤。`Grokbot-RedNote.app` 不在 git 仓库中（已被 gitignore），若该文件不存在，`start.sh` 会失败。
 
 本项目未经授权不能商用。
 

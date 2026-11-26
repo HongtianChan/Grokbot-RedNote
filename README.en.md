@@ -42,9 +42,11 @@ Author: Hongtian Chan ([chenhongtian.com](https://chenhongtian.com/), also calle
 
 ## 📦 Prerequisites
 
-- macOS 13 or later
-- System `/usr/bin/python3`, version 3.9 or later; no `pip install` needed
+- System `/usr/bin/python3`, version 3.9 or later; no `pip install` needed. The search service itself only requires this version of Python
+- `curl` (`install.sh` uses it to check whether the service is up)
 - First sign in to the [Xiaohongshu website](https://www.rednote.com/) with Chrome's default profile
+
+This project supports macOS only. Opening the app window with `start.sh` requires macOS 13 or later (that requirement comes from the app's `Info.plist`).
 
 If `/usr/bin/python3` is missing, `./install.sh` will tell you to install the macOS Command Line Tools (`xcode-select --install`).
 
@@ -57,11 +59,11 @@ cd Grokbot-RedNote
 
 ## 🛠 install.sh
 
-Run `./install.sh` from the project root. It writes `launchd/com.drunk.grokbotrednote.plist` to `~/Library/LaunchAgents/com.drunk.grokbotrednote.plist` (filling in this machine's project path, so you do not have to edit paths by hand) and starts `/usr/bin/python3 src/grokbot_rednote.py --service`. The local service address is `http://127.0.0.1:18765`.
+Run `./install.sh` from the project root. It writes `launchd/com.drunk.grokbotrednote.plist` to `~/Library/LaunchAgents/com.drunk.grokbotrednote.plist` (filling in this machine's project path, so you do not have to edit paths by hand) and starts `/usr/bin/python3 src/grokbot_rednote.py --service`. If a healthy service is already running on port `18765`, the script writes the LaunchAgent file but does not load it yet, so it will not start a second copy. The local service address is `http://127.0.0.1:18765`.
 
-## 🖥 start.sh
+## ▶️ start-service.sh
 
-Then run `./start.sh`. It runs `open "./Grokbot-RedNote.app"` and opens the app window from the project root. `Grokbot-RedNote.app` is not in the git repository (it is gitignored); if the file is missing, `start.sh` will fail.
+If you do not want a LaunchAgent, you can run `./start-service.sh` from the project root instead. It runs `/usr/bin/python3 src/grokbot_rednote.py --service` and starts the same local service in the foreground. Do not run it again while the service is already running (including right after `./install.sh`), or it will fail because the port is already in use.
 
 ## ✅ Check that the service is running
 
@@ -80,6 +82,10 @@ curl 'http://127.0.0.1:18765/search?q=keyword'
 ```
 
 On success, it returns note titles and links. You can also give Grok Bot the repository link and ask it to set this up and call the API for you.
+
+## 🖥 start.sh
+
+`./start.sh` runs `open "./Grokbot-RedNote.app"` and opens the app window from the project root. This is not required to start the search service. `Grokbot-RedNote.app` is not in the git repository (it is gitignored); if the file is missing, `start.sh` will fail.
 
 This project may not be used commercially without permission.
 
