@@ -2,11 +2,17 @@
 # -*- coding: utf-8 -*-
 """Daily search caps, persisted on this machine and reset at local midnight.
 
-Free accounts get FREE_SEARCH_CAP searches per local day; paid accounts get
-PAID_SEARCH_CAP. The count lives outside the git checkout so restarting the
-app or recloning the repo does not reset it. A signed shadow copy makes a
-casual edit or delete of one file harder to abuse. A determined user who
-deletes every copy can still reset a local-only limiter; there is no server.
+The default (a checkout of the public repo, with no tier flag, no
+GROKBOT_REDNOTE_TIER, and no subscription.json) is FREE_SEARCH_CAP searches
+per local day. Paid accounts get PAID_SEARCH_CAP. Local development or
+testing can set GROKBOT_REDNOTE_DEV=1 or pass --dev for no daily cap.
+Presence of a .git directory is not treated as dev mode, because a normal
+clone of the public repo has one too.
+
+The count lives outside the git checkout so restarting the app or recloning
+the repo does not reset it. A signed shadow copy makes a casual edit or
+delete of one file harder to abuse. A determined user who deletes every
+copy can still reset a local-only limiter; there is no server.
 """
 from __future__ import annotations
 
@@ -42,6 +48,7 @@ SUBSCRIPTION_KEY = STATE_DIR / "subscription.key"
 _APP_SALT = b"grokbot-rednote-usage-v1"
 _LOCK = threading.Lock()
 _cli_tier: Optional[str] = None
+_cli_dev: bool = False
 
 
 class RateLimitError(RuntimeError):
@@ -65,6 +72,20 @@ def configure_paths(state_dir: Path, shadow_dir: Optional[Path] = None) -> None:
 def set_cli_tier(value: Optional[str]) -> None:
     global _cli_tier
     _cli_tier = _normalize_tier(value)
+
+
+def set_cli_dev(value: bool = False) -> None:
+    global _cli_dev
+    _cli_dev = bool(value)
+
+
+def _truthy_env(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def dev_mode_enabled() -> bool:
+    """True only when local testing opts in. A .git directory is not enough."""
+    return _cli_dev or _truthy_env("GROKBOT_REDNOTE_DEV")
 
 
 def local_tzinfo():
@@ -160,12 +181,18 @@ def current_tier() -> str:
         normalized = _normalize_tier(candidate)
         if normalized:
             return normalized
+    if dev_mode_enabled():
+        return "dev"
     return "free"
 
 
-def search_cap(tier: Optional[str] = None) -> int:
+def search_cap(tier: Optional[str] = None) -> Optional[int]:
     chosen = tier or current_tier()
-    return PAID_SEARCH_CAP if chosen == "paid" else FREE_SEARCH_CAP
+    if chosen == "paid":
+        return PAID_SEARCH_CAP
+    if chosen == "dev":
+        return None
+    return FREE_SEARCH_CAP
 
 
 def _sign(machine: str, date: str, searches: int) -> str:
@@ -214,9 +241,11 @@ def load_state() -> dict[str, Any]:
     machine = machine_fingerprint()
     today = today_key()
     cap = search_cap()
+    # Tamper fail-closed needs a numeric cap; unlimited uses the free cap.
+    record_cap = FREE_SEARCH_CAP if cap is None else cap
     copies = []
     for path in (STATE_FILE, SHADOW_FILE):
-        record = _valid_record(_read_json(path), machine, today, cap)
+        record = _valid_record(_read_json(path), machine, today, record_cap)
         if record is not None:
             copies.append(record)
     if not copies:
@@ -249,7 +278,8 @@ def remaining() -> dict[str, Any]:
         state = load_state()
         cap = search_cap()
         used = int(state["searches"])
-        left = max(0, cap - used)
+        unlimited = cap is None
+        left = None if unlimited else max(0, cap - used)
         return {
             "ok": True,
             "tier": current_tier(),
@@ -257,7 +287,8 @@ def remaining() -> dict[str, Any]:
             "search_cap": cap,
             "searches_used": used,
             "searches_left": left,
-            "limit_reached": used >= cap,
+            "limit_reached": False if unlimited else used >= cap,
+            "unlimited": unlimited,
             "reset_tz": tz_name(),
             "free_search_cap": FREE_SEARCH_CAP,
             "paid_search_cap": PAID_SEARCH_CAP,
@@ -278,13 +309,14 @@ def consume_search() -> dict[str, Any]:
         state = load_state()
         cap = search_cap()
         used = int(state["searches"])
-        if used >= cap:
+        if cap is not None and used >= cap:
             payload = _denied_payload(state, cap)
             raise RateLimitError(payload["error"], payload)
         state["searches"] = used + 1
         save_state(state)
         cap = search_cap()
         used = int(state["searches"])
+        unlimited = cap is None
         return {
             "ok": True,
             "accepted": True,
@@ -292,8 +324,9 @@ def consume_search() -> dict[str, Any]:
             "date": state["date"],
             "search_cap": cap,
             "searches_used": used,
-            "searches_left": max(0, cap - used),
-            "limit_reached": used >= cap,
+            "searches_left": None if unlimited else max(0, cap - used),
+            "limit_reached": False if unlimited else used >= cap,
+            "unlimited": unlimited,
             "reset_tz": tz_name(),
         }
 
@@ -324,7 +357,7 @@ def check_search() -> dict[str, Any]:
     with _LOCK:
         state = load_state()
         cap = search_cap()
-        if int(state["searches"]) >= cap:
+        if cap is not None and int(state["searches"]) >= cap:
             payload = _denied_payload(state, cap)
             raise RateLimitError(payload["error"], payload)
         return remaining()

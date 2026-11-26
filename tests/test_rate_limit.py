@@ -24,7 +24,9 @@ class RateLimitTests(unittest.TestCase):
         root = Path(self.tmpdir.name)
         rate_limit.configure_paths(root / "state", root / "shadow")
         rate_limit.set_cli_tier(None)
+        rate_limit.set_cli_dev(False)
         os.environ.pop("GROKBOT_REDNOTE_TIER", None)
+        os.environ.pop("GROKBOT_REDNOTE_DEV", None)
         self.machine_patch = mock.patch.object(
             rate_limit, "machine_fingerprint", return_value="machine-test-aaa"
         )
@@ -36,7 +38,9 @@ class RateLimitTests(unittest.TestCase):
         self.machine_patch.stop()
         self.today_patch.stop()
         rate_limit.set_cli_tier(None)
+        rate_limit.set_cli_dev(False)
         os.environ.pop("GROKBOT_REDNOTE_TIER", None)
+        os.environ.pop("GROKBOT_REDNOTE_DEV", None)
         self.tmpdir.cleanup()
 
     def test_free_cap_is_10_and_eleventh_is_denied(self) -> None:
@@ -122,6 +126,48 @@ class RateLimitTests(unittest.TestCase):
         os.environ["GROKBOT_REDNOTE_TIER"] = "paid"
         self.assertEqual(rate_limit.current_tier(), "paid")
         self.assertEqual(rate_limit.search_cap(), 200)
+
+    def test_default_without_flags_is_ten(self) -> None:
+        self.assertEqual(rate_limit.current_tier(), "free")
+        self.assertEqual(rate_limit.search_cap(), 10)
+        # A git checkout of the public repo must still be capped; .git is not dev mode.
+        self.assertTrue((Path(__file__).resolve().parents[1] / ".git").is_dir())
+        self.assertFalse(rate_limit.dev_mode_enabled())
+
+    def test_dev_env_is_unlimited(self) -> None:
+        os.environ["GROKBOT_REDNOTE_DEV"] = "1"
+        self.assertEqual(rate_limit.current_tier(), "dev")
+        self.assertIsNone(rate_limit.search_cap())
+        for _ in range(15):
+            info = rate_limit.consume_search()
+            self.assertTrue(info["accepted"])
+            self.assertTrue(info["unlimited"])
+            self.assertIsNone(info["search_cap"])
+            self.assertIsNone(info["searches_left"])
+            self.assertFalse(info["limit_reached"])
+        remaining = rate_limit.remaining()
+        self.assertEqual(remaining["searches_used"], 15)
+        self.assertTrue(remaining["unlimited"])
+        self.assertFalse(remaining["limit_reached"])
+
+    def test_dev_flag_is_unlimited(self) -> None:
+        rate_limit.set_cli_dev(True)
+        self.assertTrue(rate_limit.dev_mode_enabled())
+        self.assertIsNone(rate_limit.search_cap())
+        rate_limit.consume_search()
+        self.assertTrue(rate_limit.remaining()["unlimited"])
+
+    def test_explicit_paid_wins_over_dev(self) -> None:
+        os.environ["GROKBOT_REDNOTE_DEV"] = "1"
+        rate_limit.set_cli_tier("paid")
+        self.assertEqual(rate_limit.current_tier(), "paid")
+        self.assertEqual(rate_limit.search_cap(), 200)
+
+    def test_explicit_free_wins_over_dev(self) -> None:
+        os.environ["GROKBOT_REDNOTE_DEV"] = "1"
+        rate_limit.set_cli_tier("free")
+        self.assertEqual(rate_limit.current_tier(), "free")
+        self.assertEqual(rate_limit.search_cap(), 10)
 
 
 if __name__ == "__main__":

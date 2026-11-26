@@ -26,7 +26,7 @@ from note_urls import publicize_payload, resolve_go_location, session_open_url  
 from refine_query import apply_explore_sample, refine_query, should_refine  # noqa: E402
 from learn import clear_records, records_payload, safe_record_open, safe_rerank_and_log, trim_log  # noqa: E402
 from summarize import attach_summary, collect_search_paths, load_notes_from_paths, summarize_notes  # noqa: E402
-from rate_limit import RateLimitError, consume_search, set_cli_tier, status_payload  # noqa: E402
+from rate_limit import RateLimitError, consume_search, set_cli_dev, set_cli_tier, status_payload  # noqa: E402
 from local_crypto import migrate_state_dir  # noqa: E402
 
 SERVICE_HOST = "127.0.0.1"
@@ -686,10 +686,16 @@ def main() -> int:
         "--tier",
         choices=["free", "paid", "normal", "subscribed"],
         default=None,
-        help="Daily search-limit tier (default free, or subscription.json / GROKBOT_REDNOTE_TIER)",
+        help="Daily search-limit tier (default free / 10 per day, or subscription.json / GROKBOT_REDNOTE_TIER)",
+    )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Disable the daily search cap for local development (same as GROKBOT_REDNOTE_DEV=1)",
     )
     args = parser.parse_args()
     set_cli_tier(args.tier)
+    set_cli_dev(args.dev)
     if args.service:
         return _service_only()
     if args.validate:

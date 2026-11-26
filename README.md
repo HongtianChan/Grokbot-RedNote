@@ -87,6 +87,10 @@ curl 'http://127.0.0.1:18765/search?q=关键词'
 
 `./start.sh` 会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。这不是启动搜索服务的必要步骤。预构建的应用请到 [GitHub Releases](https://github.com/HongtianChan/Grokbot-RedNote/releases) 下载，解压后放到项目根目录。该应用是 arm64 构建，仅适用于 Apple 芯片（M 系列）Mac，无法在 Intel Mac 上运行；在其他电脑上打开时，系统可能弹出 Gatekeeper 提示。
 
+## 🔢 每日搜索次数
+
+从本仓库运行时，默认每天可搜索 10 次，在当地时间零点重置。本地开发或测试时，设置环境变量 `GROKBOT_REDNOTE_DEV=1`，或启动服务时加上 `--dev`，即可不限次数。
+
 ## 📄 许可证
 
 本项目采用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)。完整文本见 [LICENSE](LICENSE)。
