@@ -10,6 +10,8 @@
     <string>PROJECT_DIR/src/grokbot_rednote.py</string>
     <string>--service</string>
   </array>
+  <key>WorkingDirectory</key>
+  <string>PROJECT_DIR</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

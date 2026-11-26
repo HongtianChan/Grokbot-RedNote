@@ -19,7 +19,8 @@ const LOADING_ONCE_MS = 2500;
 
 let seq = 0;
 let currentActivity = null;
-let phase = "idle"; // "idle" | "waiting" | "completing"
+let phase = "idle"; // "idle" | "waiting" | "completing" | "limited" | "error"
+const actorSlot = document.getElementById("actor-slot");
 let loadingStartedAt = 0;
 let holdTimer = 0;
 
@@ -91,11 +92,98 @@ async function waitForSetAvatar() {
 // name, cancels the completion hold and re-enters the dots wait.
 // Stale paints are ignored via seq / phase guards so a late loading
 // frame cannot stomp happy.
+
+function isLimitState(payload) {
+  return !!(
+    payload &&
+    (payload.limit_reached || payload.scene === "limit" || payload.activity === "limit")
+  );
+}
+
+function isErrorState(payload) {
+  if (!payload || isLimitState(payload)) return false;
+  return !!(payload.scene === "error" || payload.error_state);
+}
+
+function hideCrying() {
+  if (actorSlot) actorSlot.classList.remove("crying");
+  if (statusEl) statusEl.classList.remove("steady");
+}
+
+function showCrying(kind, text) {
+  clearHold();
+  hideCrying();
+  phase = kind;
+  currentActivity = kind;
+  if (actorSlot) actorSlot.classList.add("crying");
+  if (statusEl) statusEl.classList.add("steady");
+  setStatusText(text);
+  if (window.setAvatar) paint("sad");
+}
+
 window.setScene = async function setScene(payload) {
   const activity = payload && payload.busy ? payload.activity : null;
 
+  if (isLimitState(payload)) {
+    const text = payload.status_text || payload.error || "今日搜索次数已用完";
+    if (phase === "limited") {
+      setStatusText(text);
+      if (statusEl) statusEl.classList.add("steady");
+      return;
+    }
+    const token = ++seq;
+    showCrying("limited", text);
+    if (!window.setAvatar) {
+      void waitForSetAvatar().then((ok) => {
+        if (!ok || token !== seq) return;
+        if (phase !== "limited") return;
+        paint("sad");
+      });
+    }
+    return;
+  }
+
+  if (isErrorState(payload)) {
+    const text = payload.status_text || "出错了";
+    if (phase === "error") {
+      setStatusText(text);
+      if (statusEl) statusEl.classList.add("steady");
+      return;
+    }
+    const token = ++seq;
+    showCrying("error", text);
+    if (!window.setAvatar) {
+      void waitForSetAvatar().then((ok) => {
+        if (!ok || token !== seq) return;
+        if (phase !== "error") return;
+        paint("sad");
+      });
+    }
+    return;
+  }
+
+  if (phase === "limited" || phase === "error") {
+    hideCrying();
+    if (!activity) {
+      const token = ++seq;
+      phase = "idle";
+      currentActivity = null;
+      setStatusText("");
+      if (window.setAvatar) paint("happy");
+      else {
+        void waitForSetAvatar().then((ok) => {
+          if (!ok || token !== seq) return;
+          if (phase !== "idle") return;
+          paint("happy");
+        });
+      }
+      return;
+    }
+  }
+
   if (activity) {
     clearHold();
+    hideCrying();
     setStatusText(labelFor(payload));
     currentActivity = activity;
     phase = "waiting";
@@ -472,3 +560,17 @@ async function boot() {
 }
 
 boot();
+
+(function previewFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const scene = params.get("preview") || params.get("scene");
+    if (scene === "limit") {
+      window.setScene({ limit_reached: true, scene: "limit", status_text: "今日搜索次数已用完" });
+    } else if (scene === "error") {
+      window.setScene({ error_state: true, scene: "error", status_text: "出错了" });
+    }
+  } catch (err) {
+    // Ignore preview parse errors.
+  }
+})();

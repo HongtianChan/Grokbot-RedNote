@@ -131,7 +131,7 @@ class LearnLogTests(unittest.TestCase):
         self.assertNotIn("cccccccccccccccccccccc00", open_ids)
         self.assertIn("cccccccccccccccccccccc51", open_ids)
         self.assertIn("dddddddddddddddddddddddd", open_ids)
-        weights = json.loads(learn.WEIGHTS_FILE.read_text(encoding="utf-8"))
+        weights = learn.load_weights()
         self.assertEqual(weights["opened_count"], 2)
         self.assertIn("Ann", weights["authors_opened"])
         self.assertIn("Bob", weights["authors_opened"])
@@ -153,7 +153,8 @@ class LearnLogTests(unittest.TestCase):
         result = learn.clear_records()
         self.assertTrue(result["ok"])
         self.assertEqual(result["count"], 0)
-        self.assertEqual(learn.LOG_FILE.read_text(encoding="utf-8"), "")
+        from local_crypto import read_text
+        self.assertEqual(read_text(learn.LOG_FILE, default=""), "")
         self.assertEqual(learn._load_events(), [])
         weights = learn.load_weights()
         self.assertEqual(int(weights.get("opened_count") or 0), 0)

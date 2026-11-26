@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover
 
 from note_urls import canonical_web_url, extract_note_id as _id_from_href
 from refine_query import INTENT_WORDS, PLACES, STOPWORDS, tokenize
+from local_crypto import read_json, read_text, write_json, write_text
 
 STATE_DIR = Path.home() / "Library" / "Application Support" / "Grokbot-RedNote"
 LOG_FILE = STATE_DIR / "learn.jsonl"
@@ -55,9 +56,7 @@ def _now_iso() -> str:
 
 def _write_json(path: Path, payload: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    write_json(path, payload)
 
 
 def _parse_likes(value: Any) -> Optional[int]:
@@ -157,10 +156,10 @@ def compact_note(note: dict, extra_urls: Iterable[str] = ()) -> dict:
 
 def _append_event(event: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
+    existing = read_text(LOG_FILE, default="")
     line = json.dumps(event, ensure_ascii=False) + "\n"
-    with LOG_FILE.open("a", encoding="utf-8") as handle:
-        handle.write(line)
-        handle.flush()
+    write_text(LOG_FILE, existing + line)
+
 
 
 def _load_events() -> list[dict]:
@@ -168,7 +167,7 @@ def _load_events() -> list[dict]:
         return []
     events: list[dict] = []
     try:
-        raw = LOG_FILE.read_text(encoding="utf-8")
+        raw = read_text(LOG_FILE, default="")
     except OSError:
         return []
     for line in raw.splitlines():
@@ -187,10 +186,8 @@ def _load_events() -> list[dict]:
 def _rewrite_log(events: list[dict]) -> None:
     """Atomically replace the on-disk log. Caller must hold _lock."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = LOG_FILE.with_suffix(LOG_FILE.suffix + ".tmp")
     lines = [json.dumps(event, ensure_ascii=False) + "\n" for event in events]
-    tmp.write_text("".join(lines), encoding="utf-8")
-    tmp.replace(LOG_FILE)
+    write_text(LOG_FILE, "".join(lines))
 
 
 def _note_ids_from_result_set(event: dict) -> set:
@@ -458,7 +455,9 @@ def load_weights() -> dict:
     if not WEIGHTS_FILE.is_file():
         return _empty_weights()
     try:
-        data = json.loads(WEIGHTS_FILE.read_text(encoding="utf-8"))
+        data = read_json(WEIGHTS_FILE, default=None)
+        if data is None:
+            return _empty_weights()
     except (OSError, json.JSONDecodeError):
         return _empty_weights()
     if not isinstance(data, dict):

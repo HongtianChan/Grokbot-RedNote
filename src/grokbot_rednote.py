@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import re
 import subprocess
@@ -25,6 +26,8 @@ from note_urls import publicize_payload, resolve_go_location, session_open_url  
 from refine_query import apply_explore_sample, refine_query, should_refine  # noqa: E402
 from learn import clear_records, records_payload, safe_record_open, safe_rerank_and_log, trim_log  # noqa: E402
 from summarize import attach_summary, collect_search_paths, load_notes_from_paths, summarize_notes  # noqa: E402
+from rate_limit import RateLimitError, consume_search, set_cli_tier, status_payload  # noqa: E402
+from local_crypto import migrate_state_dir  # noqa: E402
 
 SERVICE_HOST = "127.0.0.1"
 SERVICE_PORT = 18765
@@ -35,6 +38,10 @@ _session = ChromeSession()
 _activity_lock = threading.Lock()
 _activity = None  # "search" | "note" | None
 _activity_keyword = ""
+_error_lock = threading.Lock()
+_last_error = ""
+_preview_lock = threading.Lock()
+_preview_scene = ""  # "" | "limit" | "error"
 _results_lock = threading.Lock()
 _last_results = {
     "ok": True,
@@ -68,6 +75,60 @@ def _activity_payload() -> dict:
         "activity": kind,
         "keyword": keyword,
     }
+
+
+def _set_error(message: str = "") -> None:
+    global _last_error
+    with _error_lock:
+        _last_error = message or ""
+
+
+def _error_payload() -> dict:
+    with _error_lock:
+        message = _last_error
+    if not message:
+        return {"error_state": False, "error": ""}
+    return {
+        "error_state": True,
+        "error": message,
+        "scene": "error",
+        "status_text": "出错了",
+    }
+
+
+def _set_preview_scene(scene: str = "") -> dict:
+    global _preview_scene
+    allowed = {"", "off", "none", "limit", "error"}
+    value = (scene or "").strip().lower()
+    if value not in allowed:
+        raise ValueError("preview scene must be limit, error, or off")
+    if value in {"off", "none"}:
+        value = ""
+    with _preview_lock:
+        _preview_scene = value
+    return {"ok": True, "preview": value or "off"}
+
+
+def _status_payload() -> dict:
+    payload = {"ok": True, **_activity_payload(), **status_payload()}
+    error = _error_payload()
+    if error.get("error_state") and not payload.get("limit_reached"):
+        payload.update(error)
+    with _preview_lock:
+        preview = _preview_scene
+    if preview == "limit":
+        payload["limit_reached"] = True
+        payload["scene"] = "limit"
+        payload["status_text"] = payload.get("status_text") or "今日搜索次数已用完"
+        payload["preview"] = "limit"
+    elif preview == "error" and not payload.get("limit_reached"):
+        payload["error_state"] = True
+        payload["scene"] = "error"
+        payload["status_text"] = "出错了"
+        if not payload.get("error"):
+            payload["error"] = "预览错误状态"
+        payload["preview"] = "error"
+    return payload
 
 
 def _bring_gui_forward() -> None:
@@ -476,14 +537,20 @@ class LocalHandler(BaseHTTPRequestHandler):
             if path == "/go":
                 return self._handle_go(query, head=False)
             if path == "/status":
-                return self._send(200, {"ok": True, **_activity_payload()})
+                return self._send(200, _status_payload())
             if path == "/settings":
-                return self._send(200, {"ok": True})
+                return self._send(200, {"ok": True, **status_payload()})
+            if path == "/preview":
+                scene = (query.get("scene") or query.get("state") or [""])[0]
+                return self._send(200, _set_preview_scene(scene))
             if path == "/refine":
                 keyword = (query.get("q") or query.get("keyword") or [""])[0]
                 return self._send(200, {"ok": True, **refine_query(keyword)})
             if path == "/explore":
-                return self._send(200, _run_explore())
+                consume_search()
+                data = _run_explore()
+                _set_error("")
+                return self._send(200, data)
             if path == "/search":
                 keyword = (query.get("q") or query.get("keyword") or [""])[0]
                 refine_flag = (query.get("refine") or query.get("raw") or [None])[0]
@@ -492,12 +559,14 @@ class LocalHandler(BaseHTTPRequestHandler):
                     do_refine = False
                 else:
                     do_refine = should_refine(refine_flag)
+                consume_search()
                 data = _run_search(keyword, refine=do_refine)
                 if _truthy((query.get("enrich") or [""])[0]):
                     data = _attach_search_enrichment(
                         data,
                         max_commenters=_max_commenters((query.get("max_commenters") or ["3"])[0], 3),
                     )
+                _set_error("")
                 return self._send(200, data)
             if path == "/note":
                 url = (query.get("url") or [""])[0]
@@ -510,6 +579,7 @@ class LocalHandler(BaseHTTPRequestHandler):
                     )
                 else:
                     data = _run_note(url, source_url=source_url)
+                _set_error("")
                 return self._send(200, data)
             if path == "/enrich":
                 url = (query.get("url") or [""])[0]
@@ -528,11 +598,15 @@ class LocalHandler(BaseHTTPRequestHandler):
             if path == "/records":
                 return self._send(200, records_payload())
             return self._send(404, {"ok": False, "error": "Unknown route"})
+        except RateLimitError as exc:
+            return self._send(429, {"ok": False, **exc.payload})
         except (ChromeError, ValueError) as exc:
-            return self._send(400, {"ok": False, "error": str(exc)})
+            _set_error(str(exc))
+            return self._send(400, {"ok": False, "error": str(exc), "error_state": True, "scene": "error"})
         except Exception as exc:  # noqa: BLE001
             traceback.print_exc()
-            return self._send(500, {"ok": False, "error": str(exc)})
+            _set_error(str(exc))
+            return self._send(500, {"ok": False, "error": str(exc), "error_state": True, "scene": "error"})
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -559,6 +633,10 @@ class LocalHandler(BaseHTTPRequestHandler):
 
 def start_service(background: bool = True) -> ThreadingHTTPServer:
     try:
+        migrate_state_dir()
+    except Exception:
+        traceback.print_exc()
+    try:
         trim_log()
     except Exception:
         traceback.print_exc()
@@ -572,7 +650,7 @@ def start_service(background: bool = True) -> ThreadingHTTPServer:
 def _service_only() -> int:
     server = start_service(background=False)
     print(
-        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results /records; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize /clear-records /clear-results)"
+        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /preview /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results /records; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize /clear-records /clear-results)"
         % (SERVICE_HOST, SERVICE_PORT),
         flush=True,
     )
@@ -596,7 +674,14 @@ def main() -> int:
     parser.add_argument("--service", action="store_true", help="Run only the localhost HTTP service")
     parser.add_argument("--validate", metavar="KEYWORD", help="Search and open 5-10 notes, then exit")
     parser.add_argument("--count", type=int, default=8, help="Notes to open during --validate (5-10)")
+    parser.add_argument(
+        "--tier",
+        choices=["free", "paid", "normal", "subscribed"],
+        default=None,
+        help="Daily search-limit tier (default free, or subscription.json / GROKBOT_REDNOTE_TIER)",
+    )
     args = parser.parse_args()
+    set_cli_tier(args.tier)
     if args.service:
         return _service_only()
     if args.validate:

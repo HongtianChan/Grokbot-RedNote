@@ -143,6 +143,52 @@
       transition: opacity 0.25s ease;
     }
     #status.on { opacity: 0.92; }
+    #status.steady::after { display: none; content: none; animation: none; }
+    #tears {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+    }
+    #actor-slot.crying #tears { opacity: 1; }
+    .tear {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      background: #8fd0ff;
+      border-radius: 0 50% 50% 50%;
+      transform: rotate(45deg);
+      opacity: 0;
+    }
+    .tear-left { left: 38%; top: 46%; }
+    .tear-right { left: 56%; top: 48%; }
+    #actor-slot.crying .tear-left {
+      animation: tear-drip 1.6s ease-in infinite;
+    }
+    #actor-slot.crying .tear-right {
+      animation: tear-drip 1.6s ease-in 0.7s infinite;
+    }
+    #actor-slot.crying #actor-motion {
+      animation: cry-bob 2.4s ease-in-out infinite;
+    }
+    @keyframes tear-drip {
+      0% { opacity: 0; transform: rotate(45deg) translate(0, 0); }
+      18% { opacity: 0.95; }
+      100% { opacity: 0; transform: rotate(45deg) translate(8px, 26px); }
+    }
+    @keyframes cry-bob {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50% { transform: translateY(3px) rotate(2deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #actor-slot.crying #actor-motion { animation: none; }
+      #actor-slot.crying .tear {
+        animation: none;
+        opacity: 0.85;
+        transform: rotate(45deg);
+      }
+    }
     #status.on::after {
       content: "";
       display: inline-block;
@@ -376,6 +422,10 @@
           <div id="actor-slot">
             <div id="actor-motion">
               <div id="avatar"></div>
+              <div id="tears" aria-hidden="true">
+                <span class="tear tear-left"></span>
+                <span class="tear tear-right"></span>
+              </div>
               <div id="hat" aria-hidden="true">
                 <svg viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg">
                   <ellipse cx="60" cy="54" rx="54" ry="9" fill="#e0a82e"/>

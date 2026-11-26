@@ -4,7 +4,22 @@ import WebKit
 
 let serviceHost = "127.0.0.1"
 let servicePort = 18765
-let projectDir = "PROJECT_DIR"
+func resolveProjectDir() -> String {
+    let fm = FileManager.default
+    var candidates: [String] = []
+    let bundle = Bundle.main.bundleURL
+    candidates.append(bundle.deletingLastPathComponent().path)
+    candidates.append(fm.currentDirectoryPath)
+    for dir in candidates {
+        let script = (dir as NSString).appendingPathComponent("src/grokbot_rednote.py")
+        if fm.fileExists(atPath: script) {
+            return dir
+        }
+    }
+    return bundle.deletingLastPathComponent().path
+}
+
+let projectDir = resolveProjectDir()
 
 /// WKWebView otherwise swallows clicks, so the window cannot be dragged
 /// even with isMovableByWindowBackground. CSS -webkit-app-region: no-drag
@@ -148,6 +163,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     payload["activity"] = NSNull()
                 }
                 payload["keyword"] = obj["keyword"] as? String ?? ""
+                payload["limit_reached"] = obj["limit_reached"] as? Bool ?? false
+                payload["error_state"] = obj["error_state"] as? Bool ?? false
+                payload["scene"] = obj["scene"] as? String ?? ""
+                payload["status_text"] = obj["status_text"] as? String ?? ""
+                payload["error"] = obj["error"] as? String ?? ""
+                if let used = obj["searches_used"] { payload["searches_used"] = used }
+                if let cap = obj["search_cap"] { payload["search_cap"] = cap }
+                if let left = obj["searches_left"] { payload["searches_left"] = left }
+                if let tier = obj["tier"] { payload["tier"] = tier }
             }
             DispatchQueue.main.async {
                 self.applyStatus(payload)
@@ -160,7 +184,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let busy = payload["busy"] as? Bool ?? false
         let activity = payload["activity"] as? String ?? ""
         let keyword = payload["keyword"] as? String ?? ""
-        let signature = "\(busy)|\(activity)|\(keyword)"
+        let limitReached = payload["limit_reached"] as? Bool ?? false
+        let errorState = payload["error_state"] as? Bool ?? false
+        let scene = payload["scene"] as? String ?? ""
+        let statusText = payload["status_text"] as? String ?? ""
+        let signature = "\(busy)|\(activity)|\(keyword)|\(limitReached)|\(errorState)|\(scene)|\(statusText)"
         if !force, signature == lastSignature { return }
         lastSignature = signature
         guard let data = try? JSONSerialization.data(withJSONObject: payload),

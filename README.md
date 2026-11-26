@@ -60,20 +60,24 @@ flowchart LR
 
 ## ⏱ 请求节奏
 
-文档约定的请求节奏（目前未在代码中执行）：每天最多打开笔记 40 次、补全用户资料 20 次，均在 UTC+8 午夜重置；
+每日搜索上限已经在本地执行：普通/免费用户每天 10 次，订阅/付费用户每天 200 次，按这台电脑的当地时间零点重置。重启应用、再开一次仓库副本，或只删掉其中一个计数文件，都不会清零。
 
-打开笔记或资料前会随机等待 6–10 秒。搜索没有上限。
+次数写在本机的 `~/Library/Application Support/Grokbot-RedNote/state.json`，并有一份带校验签名的副本在 `~/Library/Caches/Grokbot-RedNote/usage.json`，两份都绑在这台机器的硬件标识上。付费档通过本机 `subscription.json`（内容如 `{"tier": "paid"}`）、环境变量 `GROKBOT_REDNOTE_TIER=paid`，或启动参数 `--tier paid` 识别；默认是免费档。触及上限或出现错误时，窗口里的机器人会切到哭泣动画。
+
+本地预览哭泣状态（不会消耗次数）：服务运行时访问 `http://127.0.0.1:18765/preview?scene=limit`，或在浏览器打开 `http://127.0.0.1:18765/?preview=limit`。用 `?scene=off` 退出预览。
 
 本地还会保存最近 50 条搜索记录（`learn.jsonl`），超出的旧记录会自动裁掉。`/tmp` 里的钩子搜索缓存只保留应用需要的编号文件，多余的转储会被清掉。
 
+搜索记录、权重、设置和次数文件在本机加密存放。密钥由这台电脑的硬件标识经 PBKDF2 派生；加解密使用系统自带的 AES-256（CommonCrypto），不另装 Python 包。读取时自动解密；若文件仍是明文，下次写入会改成密文。损坏的文件会改名为 `.corrupt` 并重建。只读 Chrome 会话和 `127.0.0.1` 绑定没有改动。
+
 ## 🛠 从零安装
 
-macOS 13+，Python 3.9+，无需 `pip install`。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。
+macOS 13+，Python 3.9+，无需 `pip install`。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。克隆后在项目根目录运行 `./install.sh` 即可完成配置并启动服务，无需手动改路径。
 
 ```sh
 git clone https://github.com/HongtianChan/Grokbot-RedNote.git
 cd Grokbot-RedNote
-/usr/bin/python3 src/grokbot_rednote.py --service
+./install.sh
 ```
 
 ## 🚀 如何运行
