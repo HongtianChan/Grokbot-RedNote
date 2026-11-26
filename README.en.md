@@ -81,6 +81,12 @@ Keep the service running, and let Grok Bot call the local search API, for exampl
 curl 'http://127.0.0.1:18765/search?q=keyword'
 ```
 
+The default is Xiaohongshu's Most Liked (最多点赞) filter. Searches from Grok Bot also include `sort=likes` automatically, so you do not have to ask for that ordering. To use Comprehensive (综合) instead, add `sort=comprehensive` or `sort=综合`:
+
+```sh
+curl 'http://127.0.0.1:18765/search?q=keyword&sort=comprehensive'
+```
+
 On success, it returns note titles and links. You can also give Grok Bot the repository link and ask it to set this up and call the API for you.
 
 ## 🖥 start.sh

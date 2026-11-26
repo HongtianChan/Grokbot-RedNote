@@ -81,6 +81,12 @@ curl http://127.0.0.1:18765/health
 curl 'http://127.0.0.1:18765/search?q=关键词'
 ```
 
+默认会使用小红书网页的「最多点赞」筛选。Grok Bot 发起的搜索也会自动带上 `sort=likes`，不必再额外说明。若要改回「综合」顺序，加上 `sort=comprehensive` 或 `sort=综合`：
+
+```sh
+curl 'http://127.0.0.1:18765/search?q=关键词&sort=comprehensive'
+```
+
 成功时会返回笔记的标题和链接。也可以把仓库链接交给 Grok Bot，让它帮你配置并调用。
 
 ## 🖥 start.sh

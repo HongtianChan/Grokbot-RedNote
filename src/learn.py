@@ -627,16 +627,22 @@ def rerank(notes: list, source: str = "search") -> list:
 
 # --- helpers used by grokbot_rednote; never raise into the HTTP path ---
 
+def safe_log_result_set(notes: list, source: str, query: str = "") -> list:
+    """Record a result set without preference rerank."""
+    try:
+        record_result_set(source=source, query=query, notes=notes)
+    except Exception:
+        traceback.print_exc()
+    return notes
+
+
 def safe_rerank_and_log(notes: list, source: str, query: str = "") -> list:
     try:
         ranked = rerank(notes, source=source)
     except Exception:
         traceback.print_exc()
         ranked = notes
-    try:
-        record_result_set(source=source, query=query, notes=ranked)
-    except Exception:
-        traceback.print_exc()
+    safe_log_result_set(ranked, source=source, query=query)
     return ranked
 
 

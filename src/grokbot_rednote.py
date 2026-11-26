@@ -21,10 +21,16 @@ ROOT = SRC_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from chrome_session import ChromeError, ChromeSession  # noqa: E402
+from chrome_session import (  # noqa: E402
+    ChromeError,
+    ChromeSession,
+    normalize_search_sort,
+    prepare_search_request,
+    sort_notes_by_likes,
+)
 from note_urls import publicize_payload, resolve_go_location, session_open_url  # noqa: E402
 from refine_query import apply_explore_sample, refine_query, should_refine  # noqa: E402
-from learn import clear_records, records_payload, safe_record_open, safe_rerank_and_log, trim_log  # noqa: E402
+from learn import clear_records, records_payload, safe_log_result_set, safe_record_open, safe_rerank_and_log, trim_log  # noqa: E402
 from summarize import attach_summary, collect_search_paths, load_notes_from_paths, summarize_notes  # noqa: E402
 from rate_limit import RateLimitError, consume_search, set_cli_dev, set_cli_tier, status_payload  # noqa: E402
 from local_crypto import migrate_state_dir  # noqa: E402
@@ -301,12 +307,13 @@ def _run_explore() -> dict:
         _set_activity(None)
 
 
-def _run_search(keyword: str, refine: bool = True) -> dict:
+def _run_search(keyword: str, refine: bool = True, sort: Optional[str] = None) -> dict:
     original = (keyword or "").strip()
+    search_input, sort = prepare_search_request(original, sort)
     _bring_gui_forward()
-    refinement = refine_query(original) if refine else {
+    refinement = refine_query(search_input) if refine else {
         "query": original,
-        "keyword": original,
+        "keyword": search_input,
         "tokens": [],
         "intent": None,
         "changed": False,
@@ -314,7 +321,7 @@ def _run_search(keyword: str, refine: bool = True) -> dict:
         "mode": "precise",
         "needs_explore": False,
     }
-    used = (refinement.get("keyword") or original).strip()
+    used = (refinement.get("keyword") or search_input or original).strip()
     exploring = bool(refine and refinement.get("mode") == "anti_cocoon")
     _set_activity("search", "探索" if exploring else used)
     try:
@@ -326,7 +333,7 @@ def _run_search(keyword: str, refine: bool = True) -> dict:
                 if not used:
                     raise ValueError("Could not infer a search term from the explore feed")
                 _set_activity("search", used)
-            data = _session.search(used)
+            data = _session.search(used, sort=sort)
             data["query"] = original
             data["keyword"] = used
             data["refinement"] = refinement
@@ -335,9 +342,16 @@ def _run_search(keyword: str, refine: bool = True) -> dict:
                 if isinstance(item, dict) and item.get("likes_count") is None:
                     item["likes_count"] = parse_likes(item.get("likes"))
             data = publicize_payload(data)
-            data["notes"] = safe_rerank_and_log(
-                data.get("notes") or [], source="search", query=used or original
-            )
+            notes = data.get("notes") or []
+            if sort == "likes":
+                notes = sort_notes_by_likes(notes)
+                data["notes"] = notes
+                data["sort"] = "likes"
+                safe_log_result_set(notes, source="search", query=used or original)
+            else:
+                data["notes"] = safe_rerank_and_log(
+                    notes, source="search", query=used or original
+                )
             _remember_results(data, source="search")
             return data
     finally:
@@ -567,8 +581,11 @@ class LocalHandler(BaseHTTPRequestHandler):
                     do_refine = False
                 else:
                     do_refine = should_refine(refine_flag)
+                sort = normalize_search_sort(
+                    (query.get("sort") or query.get("sort_by") or [""])[0]
+                )
                 consume_search()
-                data = _run_search(keyword, refine=do_refine)
+                data = _run_search(keyword, refine=do_refine, sort=sort)
                 if _truthy((query.get("enrich") or [""])[0]):
                     data = _attach_search_enrichment(
                         data,
@@ -658,7 +675,7 @@ def start_service(background: bool = True) -> ThreadingHTTPServer:
 def _service_only() -> int:
     server = start_service(background=False)
     print(
-        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /preview /refine?q= /search?q= /explore /note?url= /enrich?url= /go?id= /results /records; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize /clear-records /clear-results)"
+        "Grokbot-RedNote service on http://%s:%d  (GET /health /status /settings /preview /refine?q= /search?q= /search?q=&sort=likes /explore /note?url= /enrich?url= /go?id= /results /records; add enrich=1 after search/note, load=hook-search on /results; POST /settings /summarize /clear-records /clear-results)"
         % (SERVICE_HOST, SERVICE_PORT),
         flush=True,
     )

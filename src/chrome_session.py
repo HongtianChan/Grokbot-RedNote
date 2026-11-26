@@ -19,6 +19,7 @@ from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent.parent
 JS_SEARCH = ROOT / "js" / "extract_search.js"
+JS_APPLY_SEARCH_SORT = ROOT / "js" / "apply_search_sort.js"
 JS_NOTE = ROOT / "js" / "extract_note.js"
 JS_EXPLORE = ROOT / "js" / "extract_explore.js"
 JS_PROFILE = ROOT / "js" / "extract_profile.js"
@@ -29,13 +30,67 @@ SEARCH_URL = (
     "https://www.rednote.com/search_result?keyword={keyword}"
     "&source=web_search_result_notes"
 )
+SEARCH_SORT_LIKES_PARAM = "popularity_descending"
+_LIKES_SORT_ALIASES = {
+    "likes",
+    "most_liked",
+    "most-liked",
+    "mostliked",
+    "popularity",
+    "popular",
+    "最多点赞",
+    "最热",
+}
+_COMPREHENSIVE_SORT_ALIASES = {"comprehensive", "综合", "general", "comp"}
 EXPLORE_URL = "https://www.rednote.com/explore"
 NOTE_READY_TIMEOUT = 25
 SEARCH_READY_TIMEOUT = 25
+SEARCH_SORT_SETTLE = 1.8
 
 
 class ChromeError(RuntimeError):
     pass
+
+
+def normalize_search_sort(value: Optional[str] = None) -> Optional[str]:
+    """Map request aliases to an internal sort key. Default is likes (最多点赞)."""
+    if value is None:
+        return "likes"
+    raw = str(value).strip()
+    if not raw:
+        return "likes"
+    lowered = raw.lower()
+    if raw in _COMPREHENSIVE_SORT_ALIASES or lowered in _COMPREHENSIVE_SORT_ALIASES:
+        return None
+    if raw in _LIKES_SORT_ALIASES or lowered in _LIKES_SORT_ALIASES:
+        return "likes"
+    return "likes"
+
+
+def prepare_search_request(keyword: str, sort: Optional[str] = None) -> tuple[str, Optional[str]]:
+    """Return (search text, sort key). Default sort is likes unless Comprehensive is explicit."""
+    return (keyword or "").strip(), normalize_search_sort(sort)
+
+
+def build_search_url(keyword: str, sort: Optional[str] = None) -> str:
+    url = SEARCH_URL.format(keyword=quote(keyword, safe=""))
+    if normalize_search_sort(sort) == "likes":
+        return url + "&sort=" + SEARCH_SORT_LIKES_PARAM
+    return url
+
+
+def sort_notes_by_likes(notes: list) -> list:
+    """Stable descending like-count order; notes without a count go last."""
+    items = [item for item in notes if isinstance(item, dict)]
+    indexed = list(enumerate(items))
+    indexed.sort(
+        key=lambda pair: (
+            pair[1].get("likes_count") is None,
+            -(pair[1].get("likes_count") or 0),
+            pair[0],
+        )
+    )
+    return [item for _, item in indexed]
 
 
 def _script(*lines: str) -> str:
@@ -238,13 +293,18 @@ class ChromeSession:
         except json.JSONDecodeError as exc:
             raise ChromeError("Page script did not return JSON: %s" % raw[:400]) from exc
 
-    def search(self, keyword: str) -> dict:
+    def search(self, keyword: str, sort: Optional[str] = None) -> dict:
         keyword = (keyword or "").strip()
         if not keyword:
             raise ChromeError("Type a keyword first")
-        url = SEARCH_URL.format(keyword=quote(keyword, safe=""))
+        sort = normalize_search_sort(sort)
+        url = build_search_url(keyword, sort)
         self.navigate(url)
         self.wait_ready(SEARCH_READY_TIMEOUT, extra_settle=2.0)
+        sort_filter = None
+        if sort == "likes":
+            sort_filter = self._apply_search_sort()
+            time.sleep(SEARCH_SORT_SETTLE)
         try:
             self._osascript(
                 _script(
@@ -261,7 +321,21 @@ class ChromeSession:
         if not isinstance(data, dict):
             raise ChromeError("Unexpected search result")
         data["keyword"] = keyword
+        if sort:
+            data["sort"] = sort
+            if sort_filter is not None:
+                data["sort_filter"] = sort_filter
         return data
+
+    def _apply_search_sort(self) -> dict:
+        """Select Xiaohongshu's on-page 最多点赞 filter. Never raises."""
+        try:
+            result = self.execute_js_file(JS_APPLY_SEARCH_SORT)
+        except Exception as exc:
+            return {"ok": False, "applied": False, "error": str(exc)}
+        if isinstance(result, dict):
+            return result
+        return {"ok": False, "applied": False, "error": "Unexpected filter script result"}
 
     def _scroll_active(self, y: int) -> None:
         try:
