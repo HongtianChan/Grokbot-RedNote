@@ -44,7 +44,7 @@
       min-width: 0;
       -webkit-app-region: drag;
     }
-    #stage-area, #actor-slot, #actor-motion, #avatar, #status, #hat, #path {
+    #stage-area, #actor-slot, #actor-motion, #avatar, #quota, #status, #hat, #path {
       -webkit-app-region: drag;
     }
     #stage-area {
@@ -143,6 +143,19 @@
       transition: opacity 0.25s ease;
     }
     #status.on { opacity: 0.92; }
+    #quota {
+      margin-top: 2px;
+      min-height: 1.2em;
+      max-width: 132px;
+      font: 11px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      color: rgba(243, 244, 246, 0.62);
+      letter-spacing: 0.04em;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    #quota.on { opacity: 0.92; }
+    #quota.empty { color: rgba(243, 244, 246, 0.45); }
     #status.steady::after { display: none; content: none; animation: none; }
     #tears {
       position: absolute;
@@ -437,6 +450,7 @@
             </div>
           </div>
         </div>
+        <div id="quota" hidden aria-live="polite"></div>
         <div id="status" aria-live="polite"></div>
       </div>
       <aside id="rail-right" class="rail">

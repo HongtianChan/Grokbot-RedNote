@@ -23,21 +23,29 @@ function flush(ms = 0) {
 
 class FakeClassList {
   constructor() {
-    this._on = false;
+    this._names = new Set();
   }
-  add(name) {
-    if (name === "on") this._on = true;
+  add(...names) {
+    for (const name of names) this._names.add(name);
   }
-  remove(name) {
-    if (name === "on") this._on = false;
+  remove(...names) {
+    for (const name of names) this._names.delete(name);
+  }
+  toggle(name, force) {
+    if (force === true) this._names.add(name);
+    else if (force === false) this._names.delete(name);
+    else if (this._names.has(name)) this._names.delete(name);
+    else this._names.add(name);
+    return this._names.has(name);
   }
   contains(name) {
-    return name === "on" && this._on;
+    return this._names.has(name);
   }
 }
 
 function installScene() {
-  const statusEl = { textContent: "", classList: new FakeClassList() };
+  const statusEl = { textContent: "", classList: new FakeClassList(), hidden: false };
+  const quotaEl = { textContent: "", classList: new FakeClassList(), hidden: true };
   const paints = [];
   const windowObj = {
     setTimeout(fn, ms) {
@@ -71,6 +79,7 @@ function installScene() {
   globalThis.document = {
     getElementById(id) {
       if (id === "status") return statusEl;
+      if (id === "quota") return quotaEl;
       // Results panel is optional in this animation harness.
       return null;
     },
@@ -82,6 +91,7 @@ function installScene() {
   return {
     paints,
     statusEl,
+    quotaEl,
     windowObj,
     async tick() {
       await Promise.resolve();
@@ -99,7 +109,7 @@ function installScene() {
   };
 }
 
-const { paints, statusEl, windowObj, tick, restore } = installScene();
+const { paints, statusEl, quotaEl, windowObj, tick, restore } = installScene();
 const setScene = windowObj.setScene;
 const snap = () => windowObj.__xhsScene();
 
@@ -201,6 +211,27 @@ try {
   assert.equal(statusEl.classList.contains("on"), false);
   flush(260);
   assert.equal(statusEl.textContent, "");
+
+  await setScene({ busy: false, searches_left: 7, search_cap: 10 });
+  assert.equal(quotaEl.hidden, false);
+  assert.equal(quotaEl.textContent, "今日剩余 7/10");
+  assert.equal(quotaEl.classList.contains("on"), true);
+  assert.equal(quotaEl.classList.contains("empty"), false);
+
+  await setScene({
+    busy: false,
+    limit_reached: true,
+    scene: "limit",
+    status_text: "今日搜索次数已用完",
+    searches_left: 0,
+    search_cap: 10,
+  });
+  assert.equal(quotaEl.textContent, "今日剩余 0/10");
+  assert.equal(quotaEl.classList.contains("empty"), true);
+
+  await setScene({ busy: false, searches_left: 199, search_cap: 200 });
+  assert.equal(quotaEl.textContent, "今日剩余 199/200");
+  assert.equal(quotaEl.classList.contains("empty"), false);
 
   console.log("ok");
   console.log(

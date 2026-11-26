@@ -533,7 +533,15 @@ class LocalHandler(BaseHTTPRequestHandler):
             if path.startswith("/avatar/"):
                 return self._send_static(ROOT / "avatar" / path[len("/avatar/"):])
             if path == "/health":
-                return self._send(200, {"ok": True, "service": "Grokbot-RedNote", "host": SERVICE_HOST})
+                return self._send(
+                    200,
+                    {
+                        "ok": True,
+                        "service": "Grokbot-RedNote",
+                        "host": SERVICE_HOST,
+                        **status_payload(),
+                    },
+                )
             if path == "/go":
                 return self._handle_go(query, head=False)
             if path == "/status":

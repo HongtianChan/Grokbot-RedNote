@@ -1,4 +1,5 @@
 const statusEl = document.getElementById("status");
+const quotaEl = document.getElementById("quota");
 
 // Official Grok Bot ogicon: body #E5050F, opaque white eyes.
 // Hex so dark theme cannot invert the body. eyeColor paints the eyes
@@ -121,7 +122,26 @@ function showCrying(kind, text) {
   if (window.setAvatar) paint("sad");
 }
 
+function updateQuota(payload) {
+  if (!quotaEl) return;
+  const cap = Number(payload && payload.search_cap);
+  const left = Number(payload && payload.searches_left);
+  if (!Number.isFinite(cap) || cap <= 0 || !Number.isFinite(left)) {
+    quotaEl.classList.remove("on", "empty");
+    quotaEl.hidden = true;
+    quotaEl.textContent = "";
+    return;
+  }
+  const remaining = Math.max(0, Math.min(Math.floor(left), Math.floor(cap)));
+  quotaEl.hidden = false;
+  quotaEl.textContent = "今日剩余 " + remaining + "/" + Math.floor(cap);
+  quotaEl.classList.add("on");
+  if (remaining <= 0) quotaEl.classList.add("empty");
+  else quotaEl.classList.remove("empty");
+}
+
 window.setScene = async function setScene(payload) {
+  updateQuota(payload);
   const activity = payload && payload.busy ? payload.activity : null;
 
   if (isLimitState(payload)) {

@@ -188,7 +188,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let errorState = payload["error_state"] as? Bool ?? false
         let scene = payload["scene"] as? String ?? ""
         let statusText = payload["status_text"] as? String ?? ""
-        let signature = "\(busy)|\(activity)|\(keyword)|\(limitReached)|\(errorState)|\(scene)|\(statusText)"
+        let searchesLeft = String(describing: payload["searches_left"] ?? "")
+        let searchCap = String(describing: payload["search_cap"] ?? "")
+        let signature = "\(busy)|\(activity)|\(keyword)|\(limitReached)|\(errorState)|\(scene)|\(statusText)|\(searchesLeft)|\(searchCap)"
         if !force, signature == lastSignature { return }
         lastSignature = signature
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
