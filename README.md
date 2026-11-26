@@ -72,14 +72,14 @@ flowchart LR
 
 ## 🛠 从零安装
 
-macOS 13+，Python 3.9+，无需 `pip install`。仓库不包含现成的 `Grokbot-RedNote.app`，需要在本机先构建。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。克隆后先构建应用，再运行 `./install.sh` 即可完成配置并启动服务，无需手动改路径。
+macOS 13+，Python 3.9+，无需 `pip install`。仓库不包含现成的 `Grokbot-RedNote.app`（该包被 gitignore），窗口源码是 `macos/main.swift`。仓库里没有构建脚本，需要在本机用 `swiftc` 生成应用包。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。
 
 ```sh
 git clone https://github.com/HongtianChan/Grokbot-RedNote.git
 cd Grokbot-RedNote
 ```
 
-若尚未安装 Xcode Command Line Tools，先运行 `xcode-select --install`。然后用 `swiftc` 编译单个源文件 `macos/main.swift`，在项目根目录生成应用包，产物是当前目录下的 `Grokbot-RedNote.app`：
+若 `/usr/bin/python3` 或 `swiftc` 不可用，先运行 `xcode-select --install`（`install.sh` 在缺少 Python 时也会提示这一步）。然后在项目根目录组装并编译应用包，产物是 `start.sh` 会打开的 `Grokbot-RedNote.app`：
 
 ```sh
 mkdir -p Grokbot-RedNote.app/Contents/MacOS Grokbot-RedNote.app/Contents/Resources
@@ -91,10 +91,11 @@ swiftc macos/main.swift \
   -target "$(uname -m)-apple-macosx13.0"
 ```
 
-构建完成后运行：
+然后运行 `./install.sh` 写入 LaunchAgent 并启动服务，再运行 `./start.sh` 打开应用，无需手动改路径：
 
 ```sh
 ./install.sh
+./start.sh
 ```
 
 ## 🚀 如何运行
@@ -102,17 +103,12 @@ swiftc macos/main.swift \
 建议直接把仓库链接丢给grokbot叫grokbot帮你配置！
 
 1. 用 Chrome 默认配置登录 [小红书网页](https://www.rednote.com/)。
-2. 按上面的步骤在本机构建 `Grokbot-RedNote.app`。若已经运行过 `./install.sh`，服务已在 `127.0.0.1:18765` 上启动，不要再启动一次（端口会被占用）。直接打开 `Grokbot-RedNote.app`。
-3. 如果服务还没在跑，先在项目目录启动一次，再打开应用：
-
-```sh
-/usr/bin/python3 src/grokbot_rednote.py --service
-```
-
-然后打开 `Grokbot-RedNote.app`。只先打开应用时，新的权限提示可能导致服务迟迟起不来。
-
-4. 服务地址：`http://127.0.0.1:18765`。可用 `GET /health` 做健康检查，用 `GET /status` 查看当前状态。
-5. 保持窗口或服务运行，即可让 Grok Bot 调用搜索。
+2. 若项目根目录还没有 `Grokbot-RedNote.app`，按上面的命令编译 `macos/main.swift`。
+3. 运行 `./install.sh`。它会配置 LaunchAgent 并启动 `/usr/bin/python3 src/grokbot_rednote.py --service`。服务已在 `127.0.0.1:18765` 上运行后，不要再运行 `./start-service.sh` 或再启动一次该命令，否则端口会被占用。
+4. 运行 `./start.sh` 打开 `Grokbot-RedNote.app`。只先打开应用时，新的权限提示可能导致服务迟迟起不来。
+5. 如果服务还没在跑，先运行一次 `./start-service.sh`（即 `/usr/bin/python3 src/grokbot_rednote.py --service`），再运行 `./start.sh`。
+6. 服务地址：`http://127.0.0.1:18765`。可用 `GET /health` 做健康检查，用 `GET /status` 查看当前状态。
+7. 保持窗口或服务运行，即可让 Grok Bot 调用搜索。
 
 仓库由 Hongtian Chan 维护：[HongtianChan/Grokbot-RedNote](https://github.com/HongtianChan/Grokbot-RedNote)。
 
