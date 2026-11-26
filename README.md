@@ -32,73 +32,53 @@
 > [!IMPORTANT]
 > 这是一个**非官方**工具，开源（干活不易求打赏-v-）。它使用你自己 *已登录* 的 Chrome 会话访问小红书网页，与小红书、xAI 均无合作、授权。（如果说我是cursor和grokbot的月度股东...倒也算是（开玩笑））。
 
-## 🧭 它是什么
+## 它是什么
 
-Grokbot-RedNote 是给 Grok Bot 用的工具，不是给人操作的搜索程序。他直击我们用户想调用grokbot搜索小红书的内容但是被拦截的痛点。小红书由 Grok Bot 亲自检索，标题和链接回到它自己的对话里；本地服务只借助你已登录的 Chrome 会话做只读访问。macOS 窗口只用来显示工作过程动画和已保存的结果，窗口里没有搜索框或输入框。
+Grokbot-RedNote 是给 Grok Bot 用的 macOS 工具。它通过你已登录的 Chrome 会话只读搜索小红书网页，并把标题和链接带回对话。
 
-作者：Hongtian Chan（[chenhongtian.com](https://chenhongtian.com/)，你也可以叫他Drunk）。
+作者：Hongtian Chan（[chenhongtian.com](https://chenhongtian.com/)，也可以叫他 Drunk）。
 
-## 🧩 工作原理
+## 环境要求
 
-```mermaid
-flowchart LR
-  G[Grok Bot] -->|调用本地接口| S[Grokbot-RedNote 服务]
-  S -->|已登录的 Chrome 会话| X[小红书网页]
-  X --> S
-  S -->|标题 + 链接| G
-```
+- macOS 13 或更高
+- 系统自带的 `/usr/bin/python3`，版本 3.9 或更高，无需 `pip install`
+- 先用 Chrome 默认配置登录 [小红书网页](https://www.rednote.com/)
 
-- 本地 HTTP 服务跑在 `127.0.0.1:18765`。
-- Grok Bot 请求 `/search?q=` 搜索，再按需请求 `/note?url=` 打开笔记；笔记链接经 `/go` 跳到带 `xsec_token` 的官方分享地址。
-- 返回给对话的是标题和链接，而不是整页转述。
+若缺少 `/usr/bin/python3`，运行 `./install.sh` 时脚本会提示安装 macOS Command Line Tools（`xcode-select --install`）。
 
-## 🎨 界面
-
-中央是红色的GrokBot：忙碌时是思考动画和省略号，结束后再回到待机状态。
-
-精选和搜索记录在头像左侧，全部结果在右侧，都是按钮，点开后展开列表；可分别清空结果或清空记录。设置不放在窗口里。
-
-## ⏱ 请求节奏
-
-每日搜索上限已经在本地执行：普通/免费用户每天 10 次，订阅/付费用户每天 200 次，按这台电脑的当地时间零点重置。重启应用、再开一次仓库副本，或只删掉其中一个计数文件，都不会清零。
-
-次数写在本机的 `~/Library/Application Support/Grokbot-RedNote/state.json`，并有一份带校验签名的副本在 `~/Library/Caches/Grokbot-RedNote/usage.json`，两份都绑在这台机器的硬件标识上。付费档通过本机 `subscription.json`（内容如 `{"tier": "paid"}`）、环境变量 `GROKBOT_REDNOTE_TIER=paid`，或启动参数 `--tier paid` 识别；默认是免费档。触及上限或出现错误时，窗口里的机器人会切到哭泣动画。
-
-本地预览哭泣状态（不会消耗次数）：服务运行时访问 `http://127.0.0.1:18765/preview?scene=limit`，或在浏览器打开 `http://127.0.0.1:18765/?preview=limit`。用 `?scene=off` 退出预览。
-
-本地还会保存最近 50 条搜索记录（`learn.jsonl`），超出的旧记录会自动裁掉。`/tmp` 里的钩子搜索缓存只保留应用需要的编号文件，多余的转储会被清掉。
-
-搜索记录、权重、设置和次数文件在本机加密存放。密钥由这台电脑的硬件标识经 PBKDF2 派生；加解密使用系统自带的 AES-256（CommonCrypto），不另装 Python 包。读取时自动解密；若文件仍是明文，下次写入会改成密文。损坏的文件会改名为 `.corrupt` 并重建。只读 Chrome 会话和 `127.0.0.1` 绑定没有改动。
-
-## 🛠 从零安装
-
-macOS 13+，Python 3.9+，无需 `pip install`。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。克隆后在项目根目录运行 `./install.sh` 即可完成配置并启动服务，无需手动改路径。然后再运行 `./start.sh`，它会打开 `Grokbot-RedNote.app`。
+## 克隆
 
 ```sh
 git clone https://github.com/HongtianChan/Grokbot-RedNote.git
 cd Grokbot-RedNote
-./install.sh
-./start.sh
 ```
 
-`install.sh` 会写入 LaunchAgent 并启动 `/usr/bin/python3 src/grokbot_rednote.py --service`。若缺少 `/usr/bin/python3`，脚本会提示先安装 macOS Command Line Tools（`xcode-select --install`）。`start.sh` 执行的是 `open "./Grokbot-RedNote.app"`。该应用包不在仓库中（已被 gitignore），需要已在项目根目录，否则 `start.sh` 会失败。
+## install.sh
 
-## 🚀 如何运行
+在项目根目录运行 `./install.sh`。它会把 `launchd/com.drunk.grokbotrednote.plist` 写入 `~/Library/LaunchAgents/com.drunk.grokbotrednote.plist`（自动填入本机项目路径，无需手动改路径），并启动 `/usr/bin/python3 src/grokbot_rednote.py --service`。本地服务地址是 `http://127.0.0.1:18765`。
 
-建议直接把仓库链接丢给grokbot叫grokbot帮你配置！
+## start.sh
 
-1. 用 Chrome 默认配置登录 [小红书网页](https://www.rednote.com/)。
-2. 运行 `./install.sh` 完成配置并启动服务。
-3. 运行 `./start.sh` 打开 `Grokbot-RedNote.app`。
-4. 服务地址：`http://127.0.0.1:18765`。可用 `GET /health` 做健康检查，用 `GET /status` 查看当前状态。
-5. 保持窗口或服务运行，即可让 Grok Bot 调用搜索。
+然后运行 `./start.sh`。它会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。`Grokbot-RedNote.app` 不在 git 仓库中（已被 gitignore），若该文件不存在，`start.sh` 会失败。
 
-仓库由 Hongtian Chan 维护：[HongtianChan/Grokbot-RedNote](https://github.com/HongtianChan/Grokbot-RedNote)。
+## 确认服务在运行
 
-## ⚖️ 使用限制
+```sh
+curl http://127.0.0.1:18765/health
+```
+
+返回里带 `"ok": true` 即表示服务已启动。
+
+## 如何使用
+
+保持服务运行，让 Grok Bot 调用本地搜索接口，例如：
+
+```sh
+curl 'http://127.0.0.1:18765/search?q=关键词'
+```
+
+成功时会返回笔记的标题和链接。也可以把仓库链接交给 Grok Bot，让它帮你配置并调用。
 
 本项目未经授权不能商用。
 
-## 👤 作者
-
-- 个人网站：[chenhongtian.com](https://chenhongtian.com/)
+仓库由 Hongtian Chan 维护：[HongtianChan/Grokbot-RedNote](https://github.com/HongtianChan/Grokbot-RedNote)。
