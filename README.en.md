@@ -86,7 +86,3 @@ On success, it returns note titles and links. You can also give Grok Bot the rep
 ## 🖥 start.sh
 
 `./start.sh` runs `open "./Grokbot-RedNote.app"` and opens the app window from the project root. This is not required to start the search service. `Grokbot-RedNote.app` is not in the git repository (it is gitignored); if the file is missing, `start.sh` will fail.
-
-This project may not be used commercially without permission.
-
-This repository is maintained by 陈鸿天 (Hongtian Chan).
