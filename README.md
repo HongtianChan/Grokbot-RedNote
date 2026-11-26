@@ -79,7 +79,7 @@ git clone https://github.com/HongtianChan/Grokbot-RedNote.git
 cd Grokbot-RedNote
 ```
 
-若尚未安装 Xcode 或 Command Line Tools，先运行 `xcode-select --install`。仓库里没有 `.xcodeproj`；用 Swift 编译器在项目根目录生成应用包，产物是当前目录下的 `Grokbot-RedNote.app`：
+若尚未安装 Xcode Command Line Tools，先运行 `xcode-select --install`。然后用 `swiftc` 编译单个源文件 `macos/main.swift`，在项目根目录生成应用包，产物是当前目录下的 `Grokbot-RedNote.app`：
 
 ```sh
 mkdir -p Grokbot-RedNote.app/Contents/MacOS Grokbot-RedNote.app/Contents/Resources
