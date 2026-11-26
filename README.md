@@ -86,7 +86,3 @@ curl 'http://127.0.0.1:18765/search?q=关键词'
 ## 🖥 start.sh
 
 `./start.sh` 会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。这不是启动搜索服务的必要步骤。`Grokbot-RedNote.app` 不在 git 仓库中（已被 gitignore），若该文件不存在，`start.sh` 会失败。
-
-本项目未经授权不能商用。
-
-仓库由 陈鸿天（Hongtian Chan）维护。
