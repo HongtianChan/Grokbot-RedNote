@@ -72,11 +72,28 @@ flowchart LR
 
 ## 🛠 从零安装
 
-macOS 13+，Python 3.9+，无需 `pip install`。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。克隆后在项目根目录运行 `./install.sh` 即可完成配置并启动服务，无需手动改路径。
+macOS 13+，Python 3.9+，无需 `pip install`。仓库不包含现成的 `Grokbot-RedNote.app`，需要在本机先构建。先用 Chrome 登录 [小红书网页](https://www.rednote.com/)。克隆后先构建应用，再运行 `./install.sh` 即可完成配置并启动服务，无需手动改路径。
 
 ```sh
 git clone https://github.com/HongtianChan/Grokbot-RedNote.git
 cd Grokbot-RedNote
+```
+
+若尚未安装 Xcode 或 Command Line Tools，先运行 `xcode-select --install`。仓库里没有 `.xcodeproj`；用 Swift 编译器在项目根目录生成应用包，产物是当前目录下的 `Grokbot-RedNote.app`：
+
+```sh
+mkdir -p Grokbot-RedNote.app/Contents/MacOS Grokbot-RedNote.app/Contents/Resources
+cp macos/Info.plist Grokbot-RedNote.app/Contents/Info.plist
+cp assets/icon.icns Grokbot-RedNote.app/Contents/Resources/icon.icns
+swiftc macos/main.swift \
+  -o Grokbot-RedNote.app/Contents/MacOS/Grokbot-RedNote \
+  -framework Cocoa -framework WebKit \
+  -target "$(uname -m)-apple-macosx13.0"
+```
+
+构建完成后运行：
+
+```sh
 ./install.sh
 ```
 
@@ -85,7 +102,8 @@ cd Grokbot-RedNote
 建议直接把仓库链接丢给grokbot叫grokbot帮你配置！
 
 1. 用 Chrome 默认配置登录 [小红书网页](https://www.rednote.com/)。
-2. 建议先在项目目录启动服务，再打开应用：
+2. 按上面的步骤在本机构建 `Grokbot-RedNote.app`。若已经运行过 `./install.sh`，服务已在 `127.0.0.1:18765` 上启动，不要再启动一次（端口会被占用）。直接打开 `Grokbot-RedNote.app`。
+3. 如果服务还没在跑，先在项目目录启动一次，再打开应用：
 
 ```sh
 /usr/bin/python3 src/grokbot_rednote.py --service
@@ -93,10 +111,10 @@ cd Grokbot-RedNote
 
 然后打开 `Grokbot-RedNote.app`。只先打开应用时，新的权限提示可能导致服务迟迟起不来。
 
-3. 服务地址：`http://127.0.0.1:18765`。可用 `GET /health` 做健康检查，用 `GET /status` 查看当前状态。
-4. 保持窗口或服务运行，即可让 Grok Bot 调用搜索。
+4. 服务地址：`http://127.0.0.1:18765`。可用 `GET /health` 做健康检查，用 `GET /status` 查看当前状态。
+5. 保持窗口或服务运行，即可让 Grok Bot 调用搜索。
 
-项目位于 `PROJECT_DIR`。仓库由 Hongtian Chan 维护：[HongtianChan/Grokbot-RedNote](https://github.com/HongtianChan/Grokbot-RedNote)。
+仓库由 Hongtian Chan 维护：[HongtianChan/Grokbot-RedNote](https://github.com/HongtianChan/Grokbot-RedNote)。
 
 ## ⚖️ 使用限制
 
