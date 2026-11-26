@@ -85,4 +85,4 @@ On success, it returns note titles and links. You can also give Grok Bot the rep
 
 ## 🖥 start.sh
 
-`./start.sh` runs `open "./Grokbot-RedNote.app"` and opens the app window from the project root. This is not required to start the search service. The included `Grokbot-RedNote.app` is an arm64 build for Apple Silicon (M-chip) Macs only. It will not run on Intel Macs, and other machines may see a Gatekeeper prompt.
+`./start.sh` runs `open "./Grokbot-RedNote.app"` and opens the app window from the project root. This is not required to start the search service. Get the prebuilt app from [GitHub Releases](https://github.com/HongtianChan/Grokbot-RedNote/releases), unzip it, and place it in the project root. The app is an arm64 build for Apple Silicon (M-chip) Macs only. It will not run on Intel Macs, and other machines may see a Gatekeeper prompt.

@@ -85,4 +85,4 @@ curl 'http://127.0.0.1:18765/search?q=关键词'
 
 ## 🖥 start.sh
 
-`./start.sh` 会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。这不是启动搜索服务的必要步骤。仓库里附带的 `Grokbot-RedNote.app` 是 arm64 构建，仅适用于 Apple 芯片（M 系列）Mac，无法在 Intel Mac 上运行；在其他电脑上打开时，系统可能弹出 Gatekeeper 提示。
+`./start.sh` 会执行 `open "./Grokbot-RedNote.app"`，打开项目根目录下的应用窗口。这不是启动搜索服务的必要步骤。预构建的应用请到 [GitHub Releases](https://github.com/HongtianChan/Grokbot-RedNote/releases) 下载，解压后放到项目根目录。该应用是 arm64 构建，仅适用于 Apple 芯片（M 系列）Mac，无法在 Intel Mac 上运行；在其他电脑上打开时，系统可能弹出 Gatekeeper 提示。
