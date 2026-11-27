@@ -95,8 +95,7 @@ curl 'http://127.0.0.1:18765/search?q=关键词&sort=comprehensive'
 
 ## 🔢 每日搜索次数
 
-从本仓库运行时，默认每天可搜索 10 次，在当地时间零点重置。本地开发或测试时，设置环境变量 `GROKBOT_REDNOTE_DEV=1`，或启动服务时加上 `--dev`，即可不限次数。
-
+从本仓库运行时，默认每天可搜索 10 次，在当地时间零点重置。
 ## 📄 许可证
 
 本项目采用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)。完整文本见 [LICENSE](LICENSE)。
